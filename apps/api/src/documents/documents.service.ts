@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma, doc_status, doc_type, documents } from '@prisma/client';
 import { AuditService, Db } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DocumentPostingRegistry } from './document-posting.registry';
 import { formatDocumentNumber, sequenceYear } from './document-number';
 
 /**
@@ -25,6 +26,7 @@ export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly posting: DocumentPostingRegistry,
   ) {}
 
   /**
@@ -166,7 +168,12 @@ export class DocumentsService {
   /** DRAFT -> CONFIRMED. */
   async confirm(documentId: string, userId: string): Promise<documents> {
     return this.prisma.$transaction(async (tx) => {
-      await this.assertDraft(tx, documentId, userId, 'CONFIRM');
+      const draft = await this.assertDraft(tx, documentId, userId, 'CONFIRM');
+
+      // Type-specific posting runs in this same transaction: if it fails —
+      // insufficient balance, say — the confirmation fails with it and the
+      // document stays a draft.
+      await this.posting.get(draft.doc_type)?.post(tx, draft, userId);
 
       const document = await tx.documents.update({
         where: { id: documentId },
@@ -191,7 +198,7 @@ export class DocumentsService {
       );
 
       return document;
-    });
+    }, NUMBERING_TX_OPTIONS);
   }
 
   /**
