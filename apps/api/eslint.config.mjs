@@ -28,6 +28,23 @@ export default [
           message: 'Use Decimal (decimal.js / Prisma.Decimal) for monetary values.',
         },
       ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          // Number() on a money-shaped identifier produces an IEEE-754 double.
+          selector:
+            "CallExpression[callee.name='Number'] > Identifier[name=/amount|price|cost|rate|salary|balance|commission|total/i]",
+          message:
+            'Monetary values must stay Decimal; Number() converts to a float.',
+        },
+        {
+          // A money-shaped property typed `number` is a float in disguise.
+          selector:
+            "TSPropertySignature[key.name=/amount|price|cost|rate|salary|balance|commission/i] > TSTypeAnnotation > TSNumberKeyword",
+          message:
+            'Monetary properties must be Decimal (or a decimal string at the API boundary), not number.',
+        },
+      ],
     },
   },
 ];

@@ -27,3 +27,24 @@ export function toOptionalDecimal(
 ): Prisma.Decimal | undefined {
   return value === undefined ? undefined : toDecimal(value, field);
 }
+
+/** Money scale everywhere in the system: NUMERIC(14,2). */
+export const MONEY_SCALE = 2;
+
+/** Exchange rate scale: NUMERIC(12,6). */
+export const RATE_SCALE = 6;
+
+/**
+ * Rounds to the stored money scale, half away from zero.
+ *
+ * A product of an amount and a rate carries more decimals than the column
+ * holds, so the rounding has to happen where it can be seen and tested rather
+ * than silently in the driver.
+ */
+export function roundMoney(value: Prisma.Decimal): Prisma.Decimal {
+  return value.toDecimalPlaces(MONEY_SCALE, Prisma.Decimal.ROUND_HALF_UP);
+}
+
+export function roundRate(value: Prisma.Decimal): Prisma.Decimal {
+  return value.toDecimalPlaces(RATE_SCALE, Prisma.Decimal.ROUND_HALF_UP);
+}

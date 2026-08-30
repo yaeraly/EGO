@@ -4,7 +4,8 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Module 0 — Foundation: complete.** 128 tests passing.
+**Module 0 — Foundation: complete. Module 1 — Capital and currency: complete.**
+211 tests passing.
 
 | Task | State |
 |---|---|
@@ -14,8 +15,12 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 | 0.4 Payment accounts, transfers (TRN) | done |
 | 0.5 Settings, audit log | done |
 | 0.6 Business days skeleton (Period Lock) | done |
+| 1.1 Capital in (CAP), investors | done |
+| 1.2 Withdrawals (WDW) | done |
+| 1.3 Currency exchange (CEX) | done |
+| 1.4 Currency FIFO service | done |
 
-Acceptance criteria:
+Module 0 acceptance criteria:
 
 | # | Criterion | Covered by |
 |---|---|---|
@@ -25,23 +30,45 @@ Acceptance criteria:
 | 4 | No plaintext PIN in the database or logs | `test/credential-leak.spec.ts` — scans every text/jsonb column plus captured stdout/stderr |
 | 5 | No document on a DAY_CLOSED date | `test/business-days.spec.ts` |
 
+Module 1 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | The §10-А.3 example: 10 000×13.00 + 5 000×13.40, pay 12 000 CNY → 156 800.00 KGS | `test/currency-fifo.spec.ts` |
+| 2 | A currency till can never go negative | `test/currency-exchange.spec.ts`, including concurrent sales |
+| 3 | A withdrawal leaves no trace in P&L expenses | `test/capital-withdrawals.spec.ts` |
+| 4 | Reverse CEX computes FX gain and loss | `test/currency-exchange.spec.ts` — gain, loss and break-even |
+| 5 | Every amount is Decimal; no float anywhere | `test/decimal-money.spec.ts` — source scan, API boundary, arithmetic |
+
 ### Still missing from the specification's inputs
 
-- `docs/EGOMOT_Knowledge_Base_v2.1.md` — the sections the modules cite (§2, §3,
-  §10-А, §12, §19, §23, §27, Security, Period Lock). The reference SQL's own
-  comments carried enough to build Module 0; Module 1 cites §10-А.3 by worked
-  example and will need the document itself.
 - `CLAUDE.md` — the working rules the specification says to follow.
 
 ### Open questions
 
-- Four seeded settings have no value: the SILVER/GOLD/VIP category thresholds
-  and the default bonus rate. They are seeded as null with a description, and
-  reading one fails loudly rather than defaulting to zero.
+- **GOLD and VIP category thresholds, and the default bonus rate**, are seeded
+  as null. §12 marks the first two "кийин такталат" and §23 leaves the rate to
+  OWNER configuration, so reading one fails loudly rather than defaulting to
+  zero. SILVER is 50 000 per §12.
+- **Capital contributed straight into a foreign-currency till builds a FIFO
+  layer** at the supplied rate, and the rate is therefore mandatory. §3 allows
+  capital in any currency and §10-А.3 requires every unit in a till to have a
+  cost basis, but the knowledge base does not join the two explicitly. Worth
+  confirming.
+- **CEX commission is recorded, not moved.** `given_amount` and
+  `received_amount` are what actually left and arrived, so a fee taken off the
+  top is already inside them. If a dealer charges the fee separately, this
+  needs a third movement.
+- **A CEX must have a KGS side.** §10-А.2 defines the document as buying
+  currency with KGS or the reverse; a foreign-to-foreign swap has no rate to
+  book a layer at and is refused.
 - `MBank` and `O!Bank` seed accounts are typed `BANK` rather than `EWALLET`.
 - PIN length is assumed to be 4–8 digits (`src/auth/dto/pin.dto.ts`).
 - No lockout policy after repeated PIN failures. Failures are logged; nothing
   throttles them.
+- **Idempotency keys** for write/confirm requests (Connectivity section) are
+  not implemented. Priority 1 in scope terms, but not named in either module's
+  task list.
 
 ## Layout
 
@@ -57,11 +84,15 @@ apps/api/                 NestJS + Prisma API
     audit/                  append-only Audit Log (§27)
     auth/                   login, JWT, PIN
     business-days/          Period Lock
+    capital/                CAP, investors (§3)
     common/                 guards, decorators, Decimal and hashing helpers
+    currency/               CEX and the currency FIFO service (§10-А)
     documents/              numbering, status machine, posting registry
+    reports/                Cash Flow classification (§3.1.5)
     security/               Security Log
     settings/               global parameters
     transfers/              TRN
+    withdrawals/            WDW (§3.1)
   test/                     integration tests against a real database
 apps/web/                 React 19 + Vite 6 PWA
 db/egomot_schema.sql      the authoritative data model
@@ -126,5 +157,9 @@ privilege check, which would make the guarantee decorative.
 - **Balances are sums, never stored totals.** An account row is locked
   `FOR UPDATE` before any movement, so a balance check cannot race the
   movement it authorises.
+- **A currency till's KGS value lives in FIFO layers** (§10-А.3), never an
+  average. Every unit entering a foreign-currency account creates a layer at
+  its rate; every unit leaving consumes the oldest layers and carries their
+  rate as its cost basis.
 - **Staff are deactivated, never deleted**, so their documents stay
   attributable.
