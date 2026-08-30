@@ -1,5 +1,6 @@
-import { PrismaClient, account_type, currency_code, user_role, user_status } from '@prisma/client';
+import { Prisma, PrismaClient, account_type, currency_code, user_role, user_status } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { SEEDED_SETTINGS } from '../src/settings/setting-keys';
 
 const prisma = new PrismaClient();
 
@@ -137,9 +138,51 @@ async function seedPaymentAccounts(): Promise<void> {
   );
 }
 
+/**
+ * Seeds the setting *keys*. An existing key keeps its value — re-running the
+ * seed must never overwrite what an OWNER configured.
+ */
+async function seedSettings(): Promise<void> {
+  let created = 0;
+
+  for (const setting of SEEDED_SETTINGS) {
+    const exists = await prisma.settings.findUnique({
+      where: { key: setting.key },
+      select: { key: true },
+    });
+    if (exists) {
+      continue;
+    }
+    await prisma.settings.create({
+      data: {
+        key: setting.key,
+        value: setting.value === null ? Prisma.JsonNull : (setting.value as Prisma.InputJsonValue),
+        description: setting.description,
+      },
+    });
+    created += 1;
+  }
+
+  const unconfigured = await prisma.settings.count({
+    where: { value: { equals: Prisma.JsonNull } },
+  });
+
+  console.log(
+    created > 0
+      ? `Settings created: ${created}`
+      : 'Settings already present; nothing to create.',
+  );
+  if (unconfigured > 0) {
+    console.log(
+      `${unconfigured} setting(s) still unconfigured — an OWNER must set them before the features that read them are used.`,
+    );
+  }
+}
+
 async function main(): Promise<void> {
   await seedBootstrapOwner();
   await seedPaymentAccounts();
+  await seedSettings();
 }
 
 main()

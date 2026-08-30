@@ -10,6 +10,7 @@ import { DocumentsModule } from './documents/documents.module';
 import { HealthController } from './health/health.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { SecurityLogModule } from './security/security-log.module';
+import { SettingsModule } from './settings/settings.module';
 import { TransfersModule } from './transfers/transfers.module';
 import { UsersModule } from './users/users.module';
 
@@ -24,6 +25,7 @@ import { UsersModule } from './users/users.module';
     DocumentsModule,
     AccountsModule,
     TransfersModule,
+    SettingsModule,
   ],
   controllers: [HealthController],
   providers: [
