@@ -2,10 +2,12 @@
  * Settings the system reads by name.
  *
  * A key is seeded so it is discoverable and documented; its *value* is the
- * OWNER's to set. Only the PIN threshold has a value the specification states
- * (50000). The rest are seeded unconfigured on purpose — a guessed category
- * threshold or bonus rate would quietly misprice customers and mispay staff,
- * which is worse than a loud failure.
+ * OWNER's to set. The PIN threshold (50000, Security section) and the SILVER
+ * threshold (50000, §12) have values the knowledge base states. The GOLD and
+ * VIP thresholds are marked "кийин такталат" there, and §23 gives no default
+ * bonus rate, so those three are seeded unconfigured on purpose — a guessed
+ * threshold or rate would quietly misprice customers and mispay staff, which
+ * is worse than a loud failure.
  */
 export const SettingKey = {
   /** A sale at or above this KGS amount requires a PIN confirmation. */
@@ -38,21 +40,21 @@ export const SEEDED_SETTINGS: SeededSetting[] = [
   },
   {
     key: SettingKey.CATEGORY_SILVER_THRESHOLD_KGS,
-    value: null,
+    value: 50000,
     description:
-      'Turnover in KGS at which a customer becomes SILVER (§12). UNCONFIGURED — set before customer categories are used.',
+      'Turnover in KGS at which a customer becomes SILVER (§12: Standard 0-49 999, Silver 50 000-99 999).',
   },
   {
     key: SettingKey.CATEGORY_GOLD_THRESHOLD_KGS,
     value: null,
     description:
-      'Turnover in KGS at which a customer becomes GOLD (§12). UNCONFIGURED — set before customer categories are used.',
+      'Turnover in KGS at which a customer becomes GOLD (§12). UNCONFIGURED — the knowledge base states "кийин такталат".',
   },
   {
     key: SettingKey.CATEGORY_VIP_THRESHOLD_KGS,
     value: null,
     description:
-      'Turnover in KGS at which a customer becomes VIP (§12). UNCONFIGURED — set before customer categories are used.',
+      'Turnover in KGS at which a customer becomes VIP (§12). UNCONFIGURED — the knowledge base states "кийин такталат".',
   },
   {
     key: SettingKey.BONUS_DEFAULT_RATE_PCT,

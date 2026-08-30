@@ -87,7 +87,9 @@ export class DocumentsService {
     // sequence number is spent on it.
     await this.businessDays.ensureOpen(tx, params.businessDate);
 
-    const year = sequenceYear(params.businessDate);
+    // The Numbering Standard counts by creation year (Bishkek), which is not
+    // necessarily the business date's year.
+    const year = sequenceYear();
     const sequence = await this.nextSequence(tx, params.docType, year);
 
     const document = await tx.documents.create({

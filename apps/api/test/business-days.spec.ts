@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { PrismaClient, day_status, doc_type, month_status } from '@prisma/client';
 import request from 'supertest';
+import { sequenceYear } from '../src/documents/document-number';
 import { DocumentsService } from '../src/documents/documents.service';
 import { createTestApp, resetDatabase } from './app-harness';
 import { createAccount, seedUser } from './fixtures';
@@ -116,15 +117,12 @@ describe('Business days and the Period Lock (Module 0.6, criterion 5)', () => {
     });
 
     it('spends no document number on the refusal', async () => {
-      const before = await prisma.doc_sequences.findUnique({
-        where: { doc_type_year: { doc_type: doc_type.SAL, year: 2026 } },
-      });
+      const key = { doc_type_year: { doc_type: doc_type.SAL, year: sequenceYear() } };
+      const before = await prisma.doc_sequences.findUnique({ where: key });
 
       await createDocument().expect(423);
 
-      const after = await prisma.doc_sequences.findUnique({
-        where: { doc_type_year: { doc_type: doc_type.SAL, year: 2026 } },
-      });
+      const after = await prisma.doc_sequences.findUnique({ where: key });
       expect(after?.last_number).toBe(before?.last_number);
       expect(await prisma.documents.count()).toBe(1);
     });

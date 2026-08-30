@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { PrismaClient, doc_type } from '@prisma/client';
+import { sequenceYear } from '../src/documents/document-number';
 import { DocumentsService } from '../src/documents/documents.service';
 import { createTestApp, resetDatabase } from './app-harness';
 import { seedUser } from './fixtures';
@@ -41,7 +42,7 @@ describe('Document numbering (Module 0.3, criterion 1)', () => {
   it('formats numbers as PREFIX-YYYY-NNNNNN', async () => {
     const document = await create();
 
-    expect(document.doc_number).toBe('SAL-2026-000001');
+    expect(document.doc_number).toBe(`SAL-${sequenceYear()}-000001`);
   });
 
   it(`issues ${CONCURRENT} unique numbers under full concurrency`, async () => {
@@ -56,12 +57,12 @@ describe('Document numbering (Module 0.3, criterion 1)', () => {
     // skipped or handed out twice.
     expect([...numbers].sort()).toEqual(
       Array.from({ length: CONCURRENT }, (_, i) =>
-        `SAL-2026-${String(i + 1).padStart(6, '0')}`,
+        `SAL-${sequenceYear()}-${String(i + 1).padStart(6, '0')}`,
       ),
     );
 
     const sequence = await prisma.doc_sequences.findUnique({
-      where: { doc_type_year: { doc_type: doc_type.SAL, year: 2026 } },
+      where: { doc_type_year: { doc_type: doc_type.SAL, year: sequenceYear() } },
     });
     expect(sequence?.last_number).toBe(CONCURRENT);
     expect(await prisma.documents.count()).toBe(CONCURRENT);
@@ -74,32 +75,52 @@ describe('Document numbering (Module 0.3, criterion 1)', () => {
       create(doc_type.TRN),
     ]);
 
-    expect(sal.doc_number).toBe('SAL-2026-000001');
-    expect(cap.doc_number).toBe('CAP-2026-000001');
-    expect(trn.doc_number).toBe('TRN-2026-000001');
+    const year = sequenceYear();
+    expect(sal.doc_number).toBe(`SAL-${year}-000001`);
+    expect(cap.doc_number).toBe(`CAP-${year}-000001`);
+    expect(trn.doc_number).toBe(`TRN-${year}-000001`);
   });
 
-  it('restarts the counter each business year', async () => {
-    const decemberish = await create(
-      doc_type.SAL,
-      new Date('2025-12-31T00:00:00.000Z'),
-    );
-    const januaryish = await create(
-      doc_type.SAL,
-      new Date('2026-01-01T00:00:00.000Z'),
-    );
-
-    expect(decemberish.doc_number).toBe('SAL-2025-000001');
-    expect(januaryish.doc_number).toBe('SAL-2026-000001');
-  });
-
-  it('takes the year from the business date, not the clock', async () => {
+  // Numbering Standard: "YYYY — документ түзүлгөн жыл". Business Date and
+  // Created Date are separate (Period Lock), so a backdated document still
+  // takes the current year's sequence.
+  it('numbers by creation year, not business date', async () => {
     const backdated = await create(
       doc_type.SAL,
       new Date('2024-06-01T00:00:00.000Z'),
     );
+    const currentYear = sequenceYear();
 
-    expect(backdated.doc_number).toBe('SAL-2024-000001');
+    expect(backdated.doc_number).toBe(`SAL-${currentYear}-000001`);
+  });
+
+  it('shares one sequence across business dates in different years', async () => {
+    const first = await create(doc_type.SAL, new Date('2025-12-31T00:00:00.000Z'));
+    const second = await create(doc_type.SAL, new Date('2026-01-01T00:00:00.000Z'));
+    const currentYear = sequenceYear();
+
+    expect(first.doc_number).toBe(`SAL-${currentYear}-000001`);
+    expect(second.doc_number).toBe(`SAL-${currentYear}-000002`);
+
+    expect(
+      await prisma.doc_sequences.findUnique({
+        where: { doc_type_year: { doc_type: doc_type.SAL, year: currentYear } },
+      }),
+    ).not.toBeNull();
+  });
+
+  describe('sequenceYear resolves in Bishkek time', () => {
+    it.each([
+      ['2026-06-15T12:00:00.000Z', 2026],
+      // 23:30 UTC on 31 December is already 05:30 on 1 January in Bishkek
+      // (UTC+6), so the new year's sequence starts there.
+      ['2025-12-31T23:30:00.000Z', 2026],
+      // 17:00 UTC on 31 December is still 23:00 on 31 December in Bishkek.
+      ['2025-12-31T17:00:00.000Z', 2025],
+      ['2026-01-01T00:30:00.000Z', 2026],
+    ])('%s -> %i', (iso, expected) => {
+      expect(sequenceYear(new Date(iso))).toBe(expected);
+    });
   });
 
   describe('a cancelled number is retired', () => {
@@ -110,9 +131,10 @@ describe('Document numbering (Module 0.3, criterion 1)', () => {
       const second = await create();
       const third = await create();
 
-      expect(first.doc_number).toBe('SAL-2026-000001');
-      expect(second.doc_number).toBe('SAL-2026-000002');
-      expect(third.doc_number).toBe('SAL-2026-000003');
+      const year = sequenceYear();
+      expect(first.doc_number).toBe(`SAL-${year}-000001`);
+      expect(second.doc_number).toBe(`SAL-${year}-000002`);
+      expect(third.doc_number).toBe(`SAL-${year}-000003`);
 
       const numbers = await prisma.documents.findMany({
         select: { doc_number: true },
@@ -122,15 +144,12 @@ describe('Document numbering (Module 0.3, criterion 1)', () => {
 
     it('leaves the sequence untouched when a document is cancelled', async () => {
       const doc = await create();
-      const before = await prisma.doc_sequences.findUnique({
-        where: { doc_type_year: { doc_type: doc_type.SAL, year: 2026 } },
-      });
+      const key = { doc_type_year: { doc_type: doc_type.SAL, year: sequenceYear() } };
+      const before = await prisma.doc_sequences.findUnique({ where: key });
 
       await documents.cancel(doc.id, userId);
 
-      const after = await prisma.doc_sequences.findUnique({
-        where: { doc_type_year: { doc_type: doc_type.SAL, year: 2026 } },
-      });
+      const after = await prisma.doc_sequences.findUnique({ where: key });
       expect(after?.last_number).toBe(before?.last_number);
     });
 
@@ -151,7 +170,7 @@ describe('Document numbering (Module 0.3, criterion 1)', () => {
 
       const all = [...created, ...more].map((d) => d.doc_number);
       expect(new Set(all).size).toBe(40);
-      expect(all).not.toContain('SAL-2026-000041');
+      expect(all).not.toContain(`SAL-${sequenceYear()}-000041`);
     });
   });
 

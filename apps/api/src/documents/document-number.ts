@@ -4,10 +4,12 @@ import { doc_type } from '@prisma/client';
  * Document Numbering Standard: PREFIX-YYYY-NNNNNN.
  *
  * The prefix is the document type itself (the reference schema's `doc_type`
- * enum is the list of 27 prefixes), the year is the document's business year,
- * and the counter is six digits, zero-padded, restarting each year.
+ * enum is the list of 27 prefixes), and the counter is six digits, zero-padded.
  */
 export const SEQUENCE_DIGITS = 6;
+
+/** Kyrgyzstan (Bishkek) — the knowledge base's stated timezone (Period Lock). */
+export const BUSINESS_TIMEZONE = 'Asia/Bishkek';
 
 export function formatDocumentNumber(
   docType: doc_type,
@@ -18,10 +20,19 @@ export function formatDocumentNumber(
 }
 
 /**
- * The sequence year is taken from the business date, not the wall clock: a
- * document booked to 31 December belongs to that year's sequence even if it is
- * entered after midnight.
+ * The sequence year is the year the document is *created*, in Bishkek time —
+ * not the year of its business date.
+ *
+ * The Numbering Standard says "YYYY — документ түзүлгөн жыл" and restarts each
+ * counter "when a new calendar year begins". Business Date and Created Date are
+ * deliberately separate (Period Lock), so the two can disagree: a sale booked
+ * to 31 December but entered at 00:30 on 1 January before day close is
+ * business-dated 31 December and numbered in the new year.
  */
-export function sequenceYear(businessDate: Date): number {
-  return businessDate.getUTCFullYear();
+export function sequenceYear(createdAt: Date = new Date()): number {
+  const year = new Intl.DateTimeFormat('en-US', {
+    timeZone: BUSINESS_TIMEZONE,
+    year: 'numeric',
+  }).format(createdAt);
+  return Number(year);
 }
