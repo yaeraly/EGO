@@ -5,13 +5,15 @@ import { AuditService } from '../audit/audit.service';
 import { InvestorsService } from '../capital/investors.service';
 import { toDecimal } from '../common/decimal';
 import { CurrencyFifoService } from '../currency/currency-fifo.service';
-import { parseBusinessDate } from '../documents/business-date';
+import { resolveBusinessDate } from '../documents/business-date';
 import { DocumentPoster } from '../documents/document-poster';
 import { DocumentPostingRegistry } from '../documents/document-posting.registry';
+import { DocumentsRepository } from '../documents/documents.repository';
 import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CashFlowCategory } from '../reports/cash-flow-category';
 import { CreateWithdrawalDto } from './dto/withdrawal.dto';
+import { WithdrawalsRepository } from './withdrawals.repository';
 
 /**
  * Owner / investor withdrawal (WDW) — §3.1.
@@ -39,6 +41,8 @@ export class WithdrawalsService implements DocumentPoster, OnModuleInit {
     private readonly investors: InvestorsService,
     private readonly fifo: CurrencyFifoService,
     private readonly audit: AuditService,
+    private readonly repository: WithdrawalsRepository,
+    private readonly documentsRepository: DocumentsRepository,
     private readonly posting: DocumentPostingRegistry,
   ) {}
 
@@ -62,9 +66,7 @@ export class WithdrawalsService implements DocumentPoster, OnModuleInit {
       await this.investors.findOne(dto.investor_id);
     }
 
-    const account = await this.prisma.payment_accounts.findUnique({
-      where: { id: dto.account_id },
-    });
+    const account = await this.accounts.findOptional(dto.account_id);
     if (!account) {
       throw new NotFoundException('account_id does not exist');
     }
@@ -79,22 +81,20 @@ export class WithdrawalsService implements DocumentPoster, OnModuleInit {
     return this.prisma.$transaction(async (tx) => {
       const document = await this.documents.create(tx, {
         docType: doc_type.WDW,
-        businessDate: parseBusinessDate(dto.business_date),
+        businessDate: resolveBusinessDate(dto.business_date),
         userId,
         comment: dto.comment ?? null,
       });
 
-      await tx.withdrawal_docs.create({
-        data: {
-          document_id: document.id,
-          wtype: dto.wtype,
-          investor_id: dto.investor_id ?? null,
-          account_id: dto.account_id,
-          amount,
-          currency: account.currency,
-          linked_capital_doc: dto.linked_capital_doc ?? null,
-          purpose: dto.purpose,
-        },
+      await this.repository.insert(tx, {
+        documentId: document.id,
+        wtype: dto.wtype,
+        investorId: dto.investor_id ?? null,
+        accountId: dto.account_id,
+        amount,
+        currency: account.currency,
+        linkedCapitalDoc: dto.linked_capital_doc ?? null,
+        purpose: dto.purpose,
       });
 
       return document;
@@ -102,10 +102,10 @@ export class WithdrawalsService implements DocumentPoster, OnModuleInit {
   }
 
   private async assertLinkedCapitalDocument(documentId: string): Promise<void> {
-    const linked = await this.prisma.documents.findUnique({
-      where: { id: documentId },
-      select: { doc_type: true },
-    });
+    const linked = await this.documentsRepository.findTypeById(
+      this.prisma,
+      documentId,
+    );
     if (!linked) {
       throw new NotFoundException('linked_capital_doc does not exist');
     }
@@ -127,9 +127,7 @@ export class WithdrawalsService implements DocumentPoster, OnModuleInit {
     document: documents,
     userId: string,
   ): Promise<void> {
-    const withdrawal = await tx.withdrawal_docs.findUnique({
-      where: { document_id: document.id },
-    });
+    const withdrawal = await this.repository.findByDocument(tx, document.id);
     if (!withdrawal) {
       throw new NotFoundException(
         `Withdrawal body missing for ${document.doc_number}`,

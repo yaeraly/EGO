@@ -1036,6 +1036,7 @@ model users {
   documents_documents_created_byTousers                      documents[]               @relation("documents_created_byTousers")
   handover_acts_handover_acts_from_userTousers               handover_acts[]           @relation("handover_acts_from_userTousers")
   handover_acts_handover_acts_to_userTousers                 handover_acts[]           @relation("handover_acts_to_userTousers")
+  idempotency_keys                                           idempotency_keys[]
   inventory_lines                                            inventory_lines[]
   payment_accounts                                           payment_accounts[]
   purchase_status_history                                    purchase_status_history[]
@@ -1134,6 +1135,21 @@ model write_offs {
   other_income    other_income[]
   write_off_items write_off_items[]
   documents       documents         @relation(fields: [document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model idempotency_keys {
+  key           String
+  user_id       String    @db.Uuid
+  endpoint      String
+  request_hash  String
+  status_code   Int?
+  response_body Json?
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  completed_at  DateTime? @db.Timestamptz(6)
+  users         users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([key, user_id])
+  @@index([created_at], map: "idx_idempotency_created")
 }
 
 enum account_type {

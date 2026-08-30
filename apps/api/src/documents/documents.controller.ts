@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { documents } from '@prisma/client';
 import { AuthenticatedUser, CurrentUser } from '../common/decorators/current-user.decorator';
-import { parseBusinessDate } from './business-date';
+import { parseBusinessDate, resolveBusinessDate } from './business-date';
 import { DocumentsService } from './documents.service';
 import {
   CancelDocumentDto,
@@ -21,7 +21,7 @@ export class DocumentsController {
   ): Promise<documents> {
     return this.documents.createStandalone({
       docType: dto.doc_type,
-      businessDate: parseBusinessDate(dto.business_date),
+      businessDate: resolveBusinessDate(dto.business_date),
       userId: user.id,
       comment: dto.comment ?? null,
     });

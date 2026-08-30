@@ -5,8 +5,10 @@ export class CreateDocumentDto {
   @IsEnum(doc_type)
   doc_type!: doc_type;
 
+  /** Defaults to today in Bishkek (Period Lock: Business Date). */
+  @IsOptional()
   @IsDateString({ strict: true }, { message: 'business_date must be YYYY-MM-DD' })
-  business_date!: string;
+  business_date?: string;
 
   @IsOptional()
   @IsString()

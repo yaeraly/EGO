@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { AuthenticatedUser } from '../common/decorators/current-user.decorator';
-import { PrismaService } from '../prisma/prisma.service';
+import { UsersRepository } from '../users/users.repository';
 
 export interface JwtPayload {
   sub: string;
@@ -13,7 +13,7 @@ export interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     config: ConfigService,
-    private readonly prisma: PrismaService,
+    private readonly users: UsersRepository,
   ) {
     const secret = config.get<string>('JWT_SECRET');
     if (!secret) {
@@ -34,10 +34,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * revocation table.
    */
   async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
-    const user = await this.prisma.users.findUnique({
-      where: { id: payload.sub },
-      select: { id: true, role: true, phone: true, status: true },
-    });
+    const user = await this.users.findAuthContext(payload.sub);
 
     if (!user || user.status !== 'ACTIVE') {
       throw new UnauthorizedException();

@@ -3,11 +3,12 @@ import { Prisma, currency_code, doc_type, documents, payment_accounts } from '@p
 import { AccountsService } from '../accounts/accounts.service';
 import { AuditService } from '../audit/audit.service';
 import { roundRate, toDecimal, toOptionalDecimal } from '../common/decimal';
-import { parseBusinessDate } from '../documents/business-date';
+import { resolveBusinessDate } from '../documents/business-date';
 import { DocumentPoster } from '../documents/document-poster';
 import { DocumentPostingRegistry } from '../documents/document-posting.registry';
 import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CurrencyExchangeRepository } from './currency-exchange.repository';
 import { CurrencyFifoService } from './currency-fifo.service';
 import { CreateCurrencyExchangeDto } from './dto/currency-exchange.dto';
 
@@ -31,6 +32,7 @@ export class CurrencyExchangeService implements DocumentPoster, OnModuleInit {
     private readonly accounts: AccountsService,
     private readonly fifo: CurrencyFifoService,
     private readonly audit: AuditService,
+    private readonly repository: CurrencyExchangeRepository,
     private readonly posting: DocumentPostingRegistry,
   ) {}
 
@@ -61,8 +63,8 @@ export class CurrencyExchangeService implements DocumentPoster, OnModuleInit {
     }
 
     const [from, to] = await Promise.all([
-      this.prisma.payment_accounts.findUnique({ where: { id: dto.from_account } }),
-      this.prisma.payment_accounts.findUnique({ where: { id: dto.to_account } }),
+      this.accounts.findOptional(dto.from_account),
+      this.accounts.findOptional(dto.to_account),
     ]);
     if (!from) {
       throw new NotFoundException('from_account does not exist');
@@ -79,22 +81,20 @@ export class CurrencyExchangeService implements DocumentPoster, OnModuleInit {
     return this.prisma.$transaction(async (tx) => {
       const document = await this.documents.create(tx, {
         docType: doc_type.CEX,
-        businessDate: parseBusinessDate(dto.business_date),
+        businessDate: resolveBusinessDate(dto.business_date),
         userId,
         comment: dto.comment ?? null,
       });
 
-      await tx.currency_exchanges.create({
-        data: {
-          document_id: document.id,
-          from_account: dto.from_account,
-          to_account: dto.to_account,
-          given_amount: given,
-          received_amount: received,
-          rate,
-          commission,
-          intermediary: dto.intermediary ?? null,
-        },
+      await this.repository.insert(tx, {
+        documentId: document.id,
+        fromAccount: dto.from_account,
+        toAccount: dto.to_account,
+        givenAmount: given,
+        receivedAmount: received,
+        rate,
+        commission,
+        intermediary: dto.intermediary ?? null,
       });
 
       return document;
@@ -145,9 +145,7 @@ export class CurrencyExchangeService implements DocumentPoster, OnModuleInit {
     document: documents,
     userId: string,
   ): Promise<void> {
-    const exchange = await tx.currency_exchanges.findUnique({
-      where: { document_id: document.id },
-    });
+    const exchange = await this.repository.findByDocument(tx, document.id);
     if (!exchange) {
       throw new NotFoundException(
         `Currency exchange body missing for ${document.doc_number}`,
@@ -213,10 +211,7 @@ export class CurrencyExchangeService implements DocumentPoster, OnModuleInit {
         rateKgs: exchange.rate,
       });
     } else {
-      await tx.currency_exchanges.update({
-        where: { document_id: document.id },
-        data: { fx_gain_loss_kgs: fxGainLoss },
-      });
+      await this.repository.setFxGainLoss(tx, document.id, fxGainLoss!);
     }
 
     await this.audit.log(

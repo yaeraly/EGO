@@ -1,22 +1,22 @@
 import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma, settings } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { SettingsRepository } from './settings.repository';
 import { SettingKeyName } from './setting-keys';
 
 @Injectable()
 export class SettingsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: SettingsRepository,
     private readonly audit: AuditService,
   ) {}
 
   findAll(): Promise<settings[]> {
-    return this.prisma.settings.findMany({ orderBy: { key: 'asc' } });
+    return this.repository.findAll();
   }
 
   async findOne(key: string): Promise<settings> {
-    const setting = await this.prisma.settings.findUnique({ where: { key } });
+    const setting = await this.repository.findByKey(key);
     if (!setting) {
       throw new NotFoundException(`Setting ${key} not found`);
     }
@@ -30,18 +30,14 @@ export class SettingsService {
     description: string | undefined,
     userId: string,
   ): Promise<settings> {
-    const before = await this.prisma.settings.findUnique({ where: { key } });
+    const before = await this.repository.findByKey(key);
     const stored = value === null ? Prisma.JsonNull : value;
 
-    const setting = await this.prisma.settings.upsert({
-      where: { key },
-      create: { key, value: stored, description, updated_by: userId },
-      update: {
-        value: stored,
-        description: description ?? before?.description,
-        updated_by: userId,
-        updated_at: new Date(),
-      },
+    const setting = await this.repository.upsert({
+      key,
+      value: stored,
+      description: description ?? before?.description,
+      userId,
     });
 
     await this.audit.log({
@@ -59,7 +55,7 @@ export class SettingsService {
   async remove(key: string, userId: string): Promise<void> {
     const before = await this.findOne(key);
 
-    await this.prisma.settings.delete({ where: { key } });
+    await this.repository.remove(key);
 
     await this.audit.log({
       userId,

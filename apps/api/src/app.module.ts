@@ -11,6 +11,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { DocumentsModule } from './documents/documents.module';
 import { HealthController } from './health/health.controller';
+import { IdempotencyModule } from './idempotency/idempotency.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SecurityLogModule } from './security/security-log.module';
 import { SettingsModule } from './settings/settings.module';
@@ -24,6 +25,7 @@ import { UsersModule } from './users/users.module';
     PrismaModule,
     SecurityLogModule,
     AuditModule,
+    IdempotencyModule,
     BusinessDaysModule,
     AuthModule,
     UsersModule,

@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { Prisma, account_type, currency_code, payment_accounts } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { UsersService } from '../users/users.service';
+import { AccountsRepository } from './accounts.repository';
 import { CreateAccountDto, UpdateAccountDto } from './dto/account.dto';
 
 export interface AccountBalance {
@@ -20,27 +22,21 @@ const ZERO = new Prisma.Decimal(0);
 export class AccountsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly repository: AccountsRepository,
+    private readonly users: UsersService,
     private readonly audit: AuditService,
   ) {}
 
   async create(dto: CreateAccountDto, userId: string): Promise<payment_accounts> {
     if (dto.owner_user) {
-      const owner = await this.prisma.users.findUnique({
-        where: { id: dto.owner_user },
-        select: { id: true },
-      });
-      if (!owner) {
-        throw new NotFoundException('owner_user does not exist');
-      }
+      await this.users.requireExists(dto.owner_user);
     }
 
-    const account = await this.prisma.payment_accounts.create({
-      data: {
-        name: dto.name,
-        type: dto.type,
-        currency: dto.currency,
-        owner_user: dto.owner_user ?? null,
-      },
+    const account = await this.repository.insert({
+      name: dto.name,
+      type: dto.type,
+      currency: dto.currency,
+      ownerUser: dto.owner_user ?? null,
     });
 
     await this.audit.log({
@@ -60,16 +56,16 @@ export class AccountsService {
   }
 
   findAll(includeInactive = false): Promise<payment_accounts[]> {
-    return this.prisma.payment_accounts.findMany({
-      where: includeInactive ? {} : { is_active: true },
-      orderBy: [{ currency: 'asc' }, { name: 'asc' }],
-    });
+    return this.repository.findMany(includeInactive);
+  }
+
+  /** Null instead of throwing, so callers can word their own error. */
+  findOptional(id: string): Promise<payment_accounts | null> {
+    return this.repository.findById(this.prisma, id);
   }
 
   async findOne(id: string): Promise<payment_accounts> {
-    const account = await this.prisma.payment_accounts.findUnique({
-      where: { id },
-    });
+    const account = await this.repository.findById(this.prisma, id);
     if (!account) {
       throw new NotFoundException('Account not found');
     }
@@ -94,13 +90,10 @@ export class AccountsService {
       await this.assertClosable(id);
     }
 
-    const account = await this.prisma.payment_accounts.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        owner_user: dto.owner_user,
-        is_active: dto.is_active,
-      },
+    const account = await this.repository.update(id, {
+      name: dto.name,
+      owner_user: dto.owner_user,
+      is_active: dto.is_active,
     });
 
     await this.audit.log({
@@ -138,23 +131,13 @@ export class AccountsService {
   }
 
   /** Balance is SUM(account_movements.amount) — never a stored running total. */
-  async balance(accountId: string): Promise<Prisma.Decimal> {
-    const { _sum } = await this.prisma.account_movements.aggregate({
-      where: { account_id: accountId },
-      _sum: { amount: true },
-    });
-    return _sum.amount ?? ZERO;
+  balance(accountId: string): Promise<Prisma.Decimal> {
+    return this.repository.balance(accountId);
   }
 
   async balances(includeInactive = false): Promise<AccountBalance[]> {
     const accounts = await this.findAll(includeInactive);
-    const sums = await this.prisma.account_movements.groupBy({
-      by: ['account_id'],
-      _sum: { amount: true },
-    });
-    const byAccount = new Map(
-      sums.map((s) => [s.account_id, s._sum.amount ?? ZERO]),
-    );
+    const byAccount = await this.repository.balancesByAccount();
 
     return accounts.map((account) => ({
       account_id: account.id,
@@ -178,20 +161,15 @@ export class AccountsService {
     tx: Prisma.TransactionClient,
     accountId: string,
   ): Promise<{ account: payment_accounts; balance: Prisma.Decimal }> {
-    const [account] = await tx.$queryRaw<payment_accounts[]>`
-      SELECT * FROM payment_accounts WHERE id = ${accountId}::uuid FOR UPDATE
-    `;
+    const account = await this.repository.lockAccount(tx, accountId);
     if (!account) {
       throw new NotFoundException('Account not found');
     }
 
-    const [{ balance }] = await tx.$queryRaw<{ balance: Prisma.Decimal | null }[]>`
-      SELECT COALESCE(SUM(amount), 0) AS balance
-      FROM account_movements
-      WHERE account_id = ${accountId}::uuid
-    `;
-
-    return { account, balance: balance ?? ZERO };
+    return {
+      account,
+      balance: await this.repository.balanceInTransaction(tx, accountId),
+    };
   }
 
   /**
@@ -247,13 +225,11 @@ export class AccountsService {
       );
     }
 
-    await tx.account_movements.create({
-      data: {
-        account_id: params.accountId,
-        document_id: params.documentId,
-        amount: params.amount,
-        kgs_value: params.kgsValue ?? null,
-      },
+    await this.repository.insertMovement(tx, {
+      accountId: params.accountId,
+      documentId: params.documentId,
+      amount: params.amount,
+      kgsValue: params.kgsValue ?? null,
     });
   }
 }

@@ -4,7 +4,8 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { ResetPinDto } from '../auth/dto/pin.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateStatusDto, UpdateUserDto } from './dto/update-user.dto';
-import { PublicUser, UsersService } from './users.service';
+import { PublicUser } from './users.repository';
+import { UsersService } from './users.service';
 
 /**
  * User administration — OWNER only (§2).

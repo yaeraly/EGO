@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SecurityLogRepository } from './security-log.repository';
 
 /**
  * Security Log event names. The reference schema (db/egomot_schema.sql,
@@ -30,19 +30,17 @@ export interface SecurityLogContext {
  */
 @Injectable()
 export class SecurityLogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly repository: SecurityLogRepository) {}
 
   async log(
     event: SecurityEventName,
     ctx: SecurityLogContext = {},
   ): Promise<void> {
-    await this.prisma.security_log.create({
-      data: {
-        event,
-        user_id: ctx.userId ?? null,
-        device: ctx.device ?? null,
-        ip: ctx.ip ?? null,
-      },
+    await this.repository.insert({
+      event,
+      userId: ctx.userId ?? null,
+      device: ctx.device ?? null,
+      ip: ctx.ip ?? null,
     });
   }
 }

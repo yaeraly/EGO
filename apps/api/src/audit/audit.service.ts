@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { Db } from '../common/db';
+import { AuditRepository } from './audit.repository';
 import { PrismaService } from '../prisma/prisma.service';
-
-/** A Prisma client or an open interactive transaction. */
-export type Db = PrismaService | Prisma.TransactionClient;
 
 export interface AuditEntry {
   /** Who acted. Null only for system-initiated changes. */
@@ -34,20 +33,26 @@ export interface AuditEntry {
  */
 @Injectable()
 export class AuditService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly repository: AuditRepository,
+  ) {}
 
   async log(entry: AuditEntry, db: Db = this.prisma): Promise<void> {
-    await db.audit_log.create({
-      data: {
-        user_id: entry.userId ?? null,
-        document_id: entry.documentId ?? null,
+    await this.repository.insert(
+      {
+        userId: entry.userId ?? null,
+        documentId: entry.documentId ?? null,
         entity: entry.entity,
-        entity_id: entry.entityId ?? null,
+        entityId: entry.entityId ?? null,
         action: entry.action,
-        old_value: entry.oldValue ?? Prisma.DbNull,
-        new_value: entry.newValue ?? Prisma.DbNull,
+        oldValue: entry.oldValue ?? Prisma.DbNull,
+        newValue: entry.newValue ?? Prisma.DbNull,
         reason: entry.reason ?? null,
       },
-    });
+      db,
+    );
   }
 }
+
+export type { Db };

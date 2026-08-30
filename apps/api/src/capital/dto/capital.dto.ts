@@ -54,8 +54,10 @@ export class CreateCapitalDto {
   @Matches(DECIMAL_PATTERN, { message: `rate ${DECIMAL_MESSAGE}` })
   rate?: string;
 
+  /** Defaults to today in Bishkek (Period Lock: Business Date). */
+  @IsOptional()
   @IsDateString({ strict: true }, { message: 'business_date must be YYYY-MM-DD' })
-  business_date!: string;
+  business_date?: string;
 
   @IsOptional()
   @IsString()

@@ -924,6 +924,28 @@ CREATE TABLE corrections (                     -- COR — Period Lock
   effective_date DATE NOT NULL                 -- Business/Effective Date
 );
 
+
+-- ============================================================================
+-- 14. IDEMPOTENCY — кайталанган суроо-талаптан коргоо  (Connectivity бөлүмү)
+-- ============================================================================
+
+-- Online-only: интернет үзүлсө, клиент операция аяктаганын билбей кайра
+-- жөнөтүшү мүмкүн. Ошол эле ачкыч менен келген суроо-талап кайра аткарылбайт —
+-- сакталган жооп кайтарылат. Ачкыч колдонуучуга байланат: башка кызматкердин
+-- ачкычы менен кокустан дал келүү болбойт.
+CREATE TABLE idempotency_keys (
+  key           TEXT NOT NULL,
+  user_id       UUID NOT NULL REFERENCES users(id),
+  endpoint      TEXT NOT NULL,             -- 'POST /api/transfers'
+  request_hash  TEXT NOT NULL,             -- дененин sha256'си
+  status_code   INT,                       -- NULL = аткарылып жатат
+  response_body JSONB,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at  TIMESTAMPTZ,
+  PRIMARY KEY (key, user_id)
+);
+CREATE INDEX idx_idempotency_created ON idempotency_keys(created_at);
+
 -- ============================================================================
 -- АЯГЫ. Негизги инварианттар (application + тест деңгээлинде текшерилет):
 --  1) Σ expense_allocations.amount_kgs = receipt_expenses.kgs_amount  (§9.9)

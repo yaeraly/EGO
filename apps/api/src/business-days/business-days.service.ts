@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, business_days, day_status, month_status } from '@prisma/client';
 import { LockedException } from '../common/locked.exception';
 import { PrismaService } from '../prisma/prisma.service';
+import { BusinessDaysRepository } from './business-days.repository';
 
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -16,7 +17,10 @@ function isoDate(date: Date): string {
  */
 @Injectable()
 export class BusinessDaysService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly repository: BusinessDaysRepository,
+  ) {}
 
   /**
    * Ensures the day exists and accepts documents.
@@ -35,17 +39,7 @@ export class BusinessDaysService {
 
     // A concurrent creator may win the insert; this one falls through to the
     // lock either way.
-    await tx.$executeRaw`
-      INSERT INTO business_days (business_date, status)
-      VALUES (${businessDate}::date, 'OPEN'::day_status)
-      ON CONFLICT (business_date) DO NOTHING
-    `;
-
-    const [day] = await tx.$queryRaw<business_days[]>`
-      SELECT * FROM business_days
-      WHERE business_date = ${businessDate}::date
-      FOR SHARE
-    `;
+    const day = await this.repository.openAndShareLock(tx, businessDate);
 
     if (day.status === day_status.DAY_CLOSED) {
       throw new LockedException(
@@ -73,10 +67,7 @@ export class BusinessDaysService {
     const year = businessDate.getUTCFullYear();
     const month = businessDate.getUTCMonth() + 1;
 
-    const period = await tx.business_months.findUnique({
-      where: { year_month: { year, month } },
-      select: { status: true },
-    });
+    const period = await this.repository.findMonthStatus(tx, year, month);
 
     if (period?.status === month_status.MONTH_CLOSED) {
       throw new LockedException(
@@ -86,9 +77,7 @@ export class BusinessDaysService {
   }
 
   async findOne(businessDate: Date): Promise<business_days> {
-    const day = await this.prisma.business_days.findUnique({
-      where: { business_date: businessDate },
-    });
+    const day = await this.repository.findByDate(businessDate);
     if (!day) {
       throw new NotFoundException(
         `Business day ${isoDate(businessDate)} has not been used yet`,
@@ -98,9 +87,6 @@ export class BusinessDaysService {
   }
 
   findMany(): Promise<business_days[]> {
-    return this.prisma.business_days.findMany({
-      orderBy: { business_date: 'desc' },
-      take: 200,
-    });
+    return this.repository.findRecent();
   }
 }

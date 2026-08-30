@@ -4,11 +4,12 @@ import { AccountsService } from '../accounts/accounts.service';
 import { AuditService } from '../audit/audit.service';
 import { roundMoney, toDecimal, toOptionalDecimal } from '../common/decimal';
 import { CurrencyFifoService } from '../currency/currency-fifo.service';
-import { parseBusinessDate } from '../documents/business-date';
+import { resolveBusinessDate } from '../documents/business-date';
 import { DocumentPoster } from '../documents/document-poster';
 import { DocumentPostingRegistry } from '../documents/document-posting.registry';
 import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CapitalRepository } from './capital.repository';
 import { CreateCapitalDto } from './dto/capital.dto';
 import { InvestorsService } from './investors.service';
 
@@ -29,6 +30,7 @@ export class CapitalService implements DocumentPoster, OnModuleInit {
     private readonly investors: InvestorsService,
     private readonly fifo: CurrencyFifoService,
     private readonly audit: AuditService,
+    private readonly repository: CapitalRepository,
     private readonly posting: DocumentPostingRegistry,
   ) {}
 
@@ -55,9 +57,7 @@ export class CapitalService implements DocumentPoster, OnModuleInit {
       );
     }
 
-    const account = await this.prisma.payment_accounts.findUnique({
-      where: { id: dto.account_id },
-    });
+    const account = await this.accounts.findOptional(dto.account_id);
     if (!account) {
       throw new NotFoundException('account_id does not exist');
     }
@@ -73,23 +73,21 @@ export class CapitalService implements DocumentPoster, OnModuleInit {
     return this.prisma.$transaction(async (tx) => {
       const document = await this.documents.create(tx, {
         docType: doc_type.CAP,
-        businessDate: parseBusinessDate(dto.business_date),
+        businessDate: resolveBusinessDate(dto.business_date),
         userId,
         comment: dto.comment ?? null,
       });
 
-      await tx.capital_docs.create({
-        data: {
-          document_id: document.id,
-          source: dto.source,
-          investor_id: dto.investor_id ?? null,
-          account_id: dto.account_id,
-          amount,
-          // The currency is the account's; capital cannot arrive in a
-          // currency the account does not hold.
-          currency: account.currency,
-          rate,
-        },
+      // The currency is the account's; capital cannot arrive in a currency
+      // the account does not hold.
+      await this.repository.insert(tx, {
+        documentId: document.id,
+        source: dto.source,
+        investorId: dto.investor_id ?? null,
+        accountId: dto.account_id,
+        amount,
+        currency: account.currency,
+        rate,
       });
 
       return document;
@@ -125,9 +123,7 @@ export class CapitalService implements DocumentPoster, OnModuleInit {
     document: documents,
     userId: string,
   ): Promise<void> {
-    const capital = await tx.capital_docs.findUnique({
-      where: { document_id: document.id },
-    });
+    const capital = await this.repository.findByDocument(tx, document.id);
     if (!capital) {
       throw new NotFoundException(
         `Capital body missing for ${document.doc_number}`,

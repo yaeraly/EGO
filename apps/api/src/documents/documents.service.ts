@@ -3,6 +3,7 @@ import { Prisma, doc_status, doc_type, documents } from '@prisma/client';
 import { AuditService, Db } from '../audit/audit.service';
 import { BusinessDaysService } from '../business-days/business-days.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DocumentsRepository } from './documents.repository';
 import { DocumentPostingRegistry } from './document-posting.registry';
 import { formatDocumentNumber, sequenceYear } from './document-number';
 
@@ -27,6 +28,7 @@ export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly repository: DocumentsRepository,
     private readonly posting: DocumentPostingRegistry,
     private readonly businessDays: BusinessDaysService,
   ) {}
@@ -47,29 +49,9 @@ export class DocumentsService {
     docType: doc_type,
     year: number,
   ): Promise<number> {
-    // The row may not exist yet on the first document of a type and year.
-    // A concurrent inserter simply wins; this one falls through to the lock.
-    await tx.$executeRaw`
-      INSERT INTO doc_sequences (doc_type, year, last_number)
-      VALUES (${docType}::doc_type, ${year}, 0)
-      ON CONFLICT (doc_type, year) DO NOTHING
-    `;
-
-    const [locked] = await tx.$queryRaw<{ last_number: number }[]>`
-      SELECT last_number
-      FROM doc_sequences
-      WHERE doc_type = ${docType}::doc_type AND year = ${year}
-      FOR UPDATE
-    `;
-
-    const next = locked.last_number + 1;
-
-    await tx.$executeRaw`
-      UPDATE doc_sequences
-      SET last_number = ${next}
-      WHERE doc_type = ${docType}::doc_type AND year = ${year}
-    `;
-
+    const lastNumber = await this.repository.lockSequence(tx, docType, year);
+    const next = lastNumber + 1;
+    await this.repository.setSequence(tx, docType, year, next);
     return next;
   }
 
@@ -92,15 +74,12 @@ export class DocumentsService {
     const year = sequenceYear();
     const sequence = await this.nextSequence(tx, params.docType, year);
 
-    const document = await tx.documents.create({
-      data: {
-        doc_type: params.docType,
-        doc_number: formatDocumentNumber(params.docType, year, sequence),
-        business_date: params.businessDate,
-        status: doc_status.DRAFT,
-        created_by: params.userId,
-        comment: params.comment ?? null,
-      },
+    const document = await this.repository.insert(tx, {
+      docType: params.docType,
+      docNumber: formatDocumentNumber(params.docType, year, sequence),
+      businessDate: params.businessDate,
+      createdBy: params.userId,
+      comment: params.comment ?? null,
     });
 
     await this.audit.log(
@@ -144,9 +123,7 @@ export class DocumentsService {
     userId: string,
     attemptedAction: string,
   ): Promise<documents> {
-    const document = await tx.documents.findUnique({
-      where: { id: documentId },
-    });
+    const document = await this.repository.findById(tx, documentId);
     if (!document) {
       throw new NotFoundException('Document not found');
     }
@@ -183,14 +160,7 @@ export class DocumentsService {
       // document stays a draft.
       await this.posting.get(draft.doc_type)?.post(tx, draft, userId);
 
-      const document = await tx.documents.update({
-        where: { id: documentId },
-        data: {
-          status: doc_status.CONFIRMED,
-          confirmed_by: userId,
-          confirmed_at: new Date(),
-        },
-      });
+      const document = await this.repository.markConfirmed(tx, documentId, userId);
 
       await this.audit.log(
         {
@@ -223,10 +193,7 @@ export class DocumentsService {
     return this.prisma.$transaction(async (tx) => {
       await this.assertDraft(tx, documentId, userId, 'CANCEL');
 
-      const document = await tx.documents.update({
-        where: { id: documentId },
-        data: { status: doc_status.CANCELLED, cancelled_at: new Date() },
-      });
+      const document = await this.repository.markCancelled(tx, documentId);
 
       await this.audit.log(
         {
@@ -259,10 +226,7 @@ export class DocumentsService {
         'UPDATE_COMMENT',
       );
 
-      const document = await tx.documents.update({
-        where: { id: documentId },
-        data: { comment },
-      });
+      const document = await this.repository.updateComment(tx, documentId, comment);
 
       await this.audit.log(
         {
@@ -282,7 +246,7 @@ export class DocumentsService {
   }
 
   async findOne(id: string): Promise<documents> {
-    const document = await this.prisma.documents.findUnique({ where: { id } });
+    const document = await this.repository.findById(this.prisma, id);
     if (!document) {
       throw new NotFoundException('Document not found');
     }
@@ -294,14 +258,6 @@ export class DocumentsService {
     status?: doc_status;
     businessDate?: Date;
   }): Promise<documents[]> {
-    return this.prisma.documents.findMany({
-      where: {
-        doc_type: filter.docType,
-        status: filter.status,
-        business_date: filter.businessDate,
-      },
-      orderBy: [{ business_date: 'desc' }, { created_at: 'desc' }],
-      take: 200,
-    });
+    return this.repository.findMany(filter);
   }
 }

@@ -1,6 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma, currency_layers } from '@prisma/client';
 import { roundMoney } from '../common/decimal';
+import { CurrencyLayersRepository } from './currency-layers.repository';
 
 export interface ConsumedLayer {
   layer_id: string;
@@ -29,6 +30,8 @@ const ZERO = new Prisma.Decimal(0);
  */
 @Injectable()
 export class CurrencyFifoService {
+  constructor(private readonly repository: CurrencyLayersRepository) {}
+
   /**
    * Records currency arriving in a till at a known KGS rate.
    *
@@ -44,15 +47,7 @@ export class CurrencyFifoService {
       rateKgs: Prisma.Decimal;
     },
   ): Promise<currency_layers> {
-    return tx.currency_layers.create({
-      data: {
-        account_id: params.accountId,
-        cex_document_id: params.documentId,
-        original_amount: params.amount,
-        remaining_amount: params.amount,
-        rate_kgs: params.rateKgs,
-      },
-    });
+    return this.repository.insertLayer(tx, params);
   }
 
   /**
@@ -75,12 +70,7 @@ export class CurrencyFifoService {
       accountName?: string;
     },
   ): Promise<ConsumptionResult> {
-    const layers = await tx.$queryRaw<currency_layers[]>`
-      SELECT * FROM currency_layers
-      WHERE account_id = ${params.accountId}::uuid AND remaining_amount > 0
-      ORDER BY created_at ASC, id ASC
-      FOR UPDATE
-    `;
+    const layers = await this.repository.lockOpenLayers(tx, params.accountId);
 
     let outstanding = params.amount;
     const consumed: ConsumedLayer[] = [];
@@ -93,19 +83,18 @@ export class CurrencyFifoService {
       const take = Prisma.Decimal.min(layer.remaining_amount, outstanding);
       const kgsValue = roundMoney(take.times(layer.rate_kgs));
 
-      await tx.currency_layer_consumptions.create({
-        data: {
-          layer_id: layer.id,
-          document_id: params.documentId,
-          amount: take,
-          kgs_value: kgsValue,
-        },
+      await this.repository.insertConsumption(tx, {
+        layerId: layer.id,
+        documentId: params.documentId,
+        amount: take,
+        kgsValue,
       });
 
-      await tx.currency_layers.update({
-        where: { id: layer.id },
-        data: { remaining_amount: layer.remaining_amount.minus(take) },
-      });
+      await this.repository.reduceRemaining(
+        tx,
+        layer.id,
+        layer.remaining_amount.minus(take),
+      );
 
       consumed.push({
         layer_id: layer.id,
@@ -143,11 +132,6 @@ export class CurrencyFifoService {
     tx: Prisma.TransactionClient,
     accountId: string,
   ): Promise<Prisma.Decimal> {
-    const [{ total }] = await tx.$queryRaw<{ total: Prisma.Decimal | null }[]>`
-      SELECT COALESCE(SUM(remaining_amount), 0) AS total
-      FROM currency_layers
-      WHERE account_id = ${accountId}::uuid
-    `;
-    return total ?? ZERO;
+    return this.repository.totalRemaining(tx, accountId);
   }
 }

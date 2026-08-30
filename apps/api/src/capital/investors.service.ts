@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { investors } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { InvestorsRepository } from './capital.repository';
 import { CreateInvestorDto, UpdateInvestorDto } from './dto/capital.dto';
 
 /**
@@ -13,13 +13,14 @@ import { CreateInvestorDto, UpdateInvestorDto } from './dto/capital.dto';
 @Injectable()
 export class InvestorsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly repository: InvestorsRepository,
     private readonly audit: AuditService,
   ) {}
 
   async create(dto: CreateInvestorDto, userId: string): Promise<investors> {
-    const investor = await this.prisma.investors.create({
-      data: { name: dto.name, phone: dto.phone ?? null },
+    const investor = await this.repository.insert({
+      name: dto.name,
+      phone: dto.phone ?? null,
     });
 
     await this.audit.log({
@@ -34,14 +35,11 @@ export class InvestorsService {
   }
 
   findAll(includeInactive = false): Promise<investors[]> {
-    return this.prisma.investors.findMany({
-      where: includeInactive ? {} : { is_active: true },
-      orderBy: { name: 'asc' },
-    });
+    return this.repository.findMany(includeInactive);
   }
 
   async findOne(id: string): Promise<investors> {
-    const investor = await this.prisma.investors.findUnique({ where: { id } });
+    const investor = await this.repository.findById(id);
     if (!investor) {
       throw new NotFoundException('Investor not found');
     }
@@ -55,9 +53,10 @@ export class InvestorsService {
   ): Promise<investors> {
     const before = await this.findOne(id);
 
-    const investor = await this.prisma.investors.update({
-      where: { id },
-      data: { name: dto.name, phone: dto.phone, is_active: dto.is_active },
+    const investor = await this.repository.update(id, {
+      name: dto.name,
+      phone: dto.phone,
+      is_active: dto.is_active,
     });
 
     await this.audit.log({

@@ -11,8 +11,10 @@ export class CreateTransferDto {
   @Matches(DECIMAL_PATTERN, { message: `amount ${DECIMAL_MESSAGE}` })
   amount!: string;
 
+  /** Defaults to today in Bishkek (Period Lock: Business Date). */
+  @IsOptional()
   @IsDateString({ strict: true }, { message: 'business_date must be YYYY-MM-DD' })
-  business_date!: string;
+  business_date?: string;
 
   @IsOptional()
   @IsString()

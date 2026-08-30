@@ -27,8 +27,10 @@ export class CreateWithdrawalDto {
   @MaxLength(1000)
   purpose!: string;
 
+  /** Defaults to today in Bishkek (Period Lock: Business Date). */
+  @IsOptional()
   @IsDateString({ strict: true }, { message: 'business_date must be YYYY-MM-DD' })
-  business_date!: string;
+  business_date?: string;
 
   @IsOptional()
   @IsString()

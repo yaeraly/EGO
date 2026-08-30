@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { user_role } from '@prisma/client';
 import { ClientContext } from '../common/request-context';
 import { burnVerifyTime, hashSecret, verifySecret } from '../common/secret-hash';
-import { PrismaService } from '../prisma/prisma.service';
+import { UsersRepository } from '../users/users.repository';
 import { SecurityEvent, SecurityLogService } from '../security/security-log.service';
 
 export interface LoginResult {
@@ -14,7 +14,7 @@ export interface LoginResult {
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly users: UsersRepository,
     private readonly jwt: JwtService,
     private readonly securityLog: SecurityLogService,
   ) {}
@@ -25,17 +25,7 @@ export class AuthService {
     password: string,
     ctx: ClientContext,
   ): Promise<LoginResult> {
-    const user = await this.prisma.users.findUnique({
-      where: { phone },
-      select: {
-        id: true,
-        full_name: true,
-        role: true,
-        phone: true,
-        status: true,
-        password_hash: true,
-      },
-    });
+    const user = await this.users.findCredentialsByPhone(phone);
 
     if (!user) {
       // Spend the same time as a real verification so a missing account is
@@ -88,10 +78,7 @@ export class AuthService {
     pin: string,
     ctx: ClientContext,
   ): Promise<{ valid: boolean }> {
-    const user = await this.prisma.users.findUnique({
-      where: { id: userId },
-      select: { pin_hash: true },
-    });
+    const user = await this.users.findPinHash(userId);
 
     const valid = user ? await verifySecret(user.pin_hash, pin) : false;
 
@@ -110,10 +97,7 @@ export class AuthService {
     newPin: string,
     ctx: ClientContext,
   ): Promise<void> {
-    const user = await this.prisma.users.findUnique({
-      where: { id: userId },
-      select: { pin_hash: true },
-    });
+    const user = await this.users.findPinHash(userId);
 
     const valid = user ? await verifySecret(user.pin_hash, currentPin) : false;
     if (!valid) {
@@ -122,9 +106,6 @@ export class AuthService {
     }
 
     await this.securityLog.log(SecurityEvent.PIN_OK, { ...ctx, userId });
-    await this.prisma.users.update({
-      where: { id: userId },
-      data: { pin_hash: await hashSecret(newPin), updated_at: new Date() },
-    });
+    await this.users.setPinHash(userId, await hashSecret(newPin));
   }
 }
