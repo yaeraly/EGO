@@ -441,8 +441,10 @@ CREATE TABLE supplier_payments (
   debt_part_cny NUMERIC(14,2) NOT NULL DEFAULT 0,
   prepay_part_cny NUMERIC(14,2) NOT NULL DEFAULT 0,
   fx_gain_loss_kgs NUMERIC(14,2) NOT NULL DEFAULT 0,  -- §10.2
-  channel     TEXT                       -- Alipay / WeChat / Bank
+  channel     TEXT,                      -- Alipay / WeChat / Bank
+  purchase_id UUID REFERENCES purchases(document_id)  -- optional: §4.2 төлөм статусу
 );
+CREATE INDEX idx_spy_purchase ON supplier_payments(purchase_id);
 
 -- Cargo Payment (CPY) — §5.2
 CREATE TABLE cargo_payments (
@@ -945,6 +947,29 @@ CREATE TABLE idempotency_keys (
   PRIMARY KEY (key, user_id)
 );
 CREATE INDEX idx_idempotency_created ON idempotency_keys(created_at);
+
+
+-- ============================================================================
+-- 15. ЭСКЕРТҮҮЛӨР  (§39)
+-- ============================================================================
+
+-- Ички эскертүүлөр. Push/telegram кийинки фазада; §39 «система автоматтык
+-- эскертүү бере алат» дегенди талап кылат, каналды белгилебейт.
+CREATE TABLE notifications (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     UUID NOT NULL REFERENCES users(id),
+  kind        TEXT NOT NULL,             -- SUPPLIER_DEBT / CARGO_DEBT / LOW_CURRENCY_BALANCE
+  title       TEXT NOT NULL,
+  body        TEXT NOT NULL,
+  payload     JSONB,
+  -- Бир эле эскертүү бир күндө кайталанбашы үчүн (мис.
+  -- 'SUPPLIER_DEBT:2026-08-30'). Digest кайра иштесе да дубль болбойт.
+  dedupe_key  TEXT NOT NULL,
+  read_at     TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, dedupe_key)
+);
+CREATE INDEX idx_notifications_unread ON notifications(user_id, created_at DESC) WHERE read_at IS NULL;
 
 -- ============================================================================
 -- АЯГЫ. Негизги инварианттар (application + тест деңгээлинде текшерилет):

@@ -20,6 +20,20 @@ export const SettingKey = {
 
   /** Bonus rate applied when a user has none of their own (§23). */
   BONUS_DEFAULT_RATE_PCT: 'bonus.default_rate_pct',
+
+  /**
+   * Manual reference rates, used only until the system has bought that
+   * currency for the first time (§10.1: "Эгер система иштегенден бери валюта
+   * сатып алуу боло элек болсо, OWNER кол менен reference rate киргизет жана
+   * бул аудитте сакталат"). Once a CEX exists its rate wins, so these are a
+   * cold-start fallback rather than an override.
+   */
+  MANUAL_REFERENCE_RATE_CNY: 'fx.manual_reference_rate.cny',
+  MANUAL_REFERENCE_RATE_USD: 'fx.manual_reference_rate.usd',
+
+  /** Warn when a currency till falls below this, in that currency (§39). */
+  LOW_BALANCE_THRESHOLD_CNY: 'alerts.low_balance_threshold.cny',
+  LOW_BALANCE_THRESHOLD_USD: 'alerts.low_balance_threshold.usd',
 } as const;
 
 export type SettingKeyName = (typeof SettingKey)[keyof typeof SettingKey];
@@ -61,5 +75,29 @@ export const SEEDED_SETTINGS: SeededSetting[] = [
     value: null,
     description:
       'Bonus rate in percent for users with no individual rate (§23). UNCONFIGURED — set before bonuses are calculated.',
+  },
+  {
+    key: SettingKey.MANUAL_REFERENCE_RATE_CNY,
+    value: null,
+    description:
+      'KGS per CNY, used only until the first CEX exists (§10.1). A real currency purchase supersedes it.',
+  },
+  {
+    key: SettingKey.MANUAL_REFERENCE_RATE_USD,
+    value: null,
+    description:
+      'KGS per USD, used only until the first CEX exists (§10.1). A real currency purchase supersedes it.',
+  },
+  {
+    key: SettingKey.LOW_BALANCE_THRESHOLD_CNY,
+    value: null,
+    description:
+      'Warn when the CNY till falls below this, in CNY (§39). UNCONFIGURED — no warning is raised.',
+  },
+  {
+    key: SettingKey.LOW_BALANCE_THRESHOLD_USD,
+    value: null,
+    description:
+      'Warn when the USD till falls below this, in USD (§39). UNCONFIGURED — no warning is raised.',
   },
 ];

@@ -6,6 +6,7 @@ import { CurrencyExchangeRepository } from './currency-exchange.repository';
 import { CurrencyExchangeService } from './currency-exchange.service';
 import { CurrencyFifoService } from './currency-fifo.service';
 import { CurrencyLayersRepository } from './currency-layers.repository';
+import { ReferenceRateService } from './reference-rate.service';
 
 /**
  * Global so later Priority 1 modules (SPY, CPY) can consume currency layers
@@ -20,7 +21,8 @@ import { CurrencyLayersRepository } from './currency-layers.repository';
     CurrencyExchangeRepository,
     CurrencyFifoService,
     CurrencyExchangeService,
+    ReferenceRateService,
   ],
-  exports: [CurrencyFifoService, CurrencyExchangeService],
+  exports: [CurrencyFifoService, CurrencyExchangeService, ReferenceRateService],
 })
 export class CurrencyModule {}

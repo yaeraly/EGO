@@ -1,28 +1,49 @@
-import { useEffect, useState } from 'react';
-
-type Health = { status: string; db: string };
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import { AppShell } from './components/AppShell';
+import { AccountsPage } from './pages/AccountsPage';
+import { CargoPage, CargoListPage } from './pages/CargoPage';
+import { CargoPaymentPage } from './pages/CargoPaymentPage';
+import { CurrencyExchangePage } from './pages/CurrencyExchangePage';
+import { LoginPage } from './pages/LoginPage';
+import { NotificationsPage } from './pages/NotificationsPage';
+import { PurchaseCardPage } from './pages/PurchaseCardPage';
+import { PurchaseListPage } from './pages/PurchaseListPage';
+import { SupplierPage, SupplierListPage } from './pages/SupplierPage';
+import { SupplierPaymentPage } from './pages/SupplierPaymentPage';
 
 export function App() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  return (
+    <AuthProvider>
+      <Router />
+    </AuthProvider>
+  );
+}
 
-  useEffect(() => {
-    fetch('/api/health')
-      .then((r) => r.json())
-      .then(setHealth)
-      .catch((e: Error) => setError(e.message));
-  }, []);
+function Router() {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   return (
-    <main style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
-      <h1>EGOMOT</h1>
-      <p>Module 0 — Foundation (skeleton)</p>
-      {error && <p style={{ color: 'crimson' }}>API: {error}</p>}
-      {health && (
-        <p>
-          API: {health.status} · DB: {health.db}
-        </p>
-      )}
-    </main>
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route path="/" element={<Navigate to="/purchases" replace />} />
+        <Route path="/purchases" element={<PurchaseListPage />} />
+        <Route path="/purchases/:id" element={<PurchaseCardPage />} />
+        <Route path="/suppliers" element={<SupplierListPage />} />
+        <Route path="/suppliers/:id" element={<SupplierPage />} />
+        <Route path="/supplier-payments/new" element={<SupplierPaymentPage />} />
+        <Route path="/cargo" element={<CargoListPage />} />
+        <Route path="/cargo/:id" element={<CargoPage />} />
+        <Route path="/cargo-payments/new" element={<CargoPaymentPage />} />
+        <Route path="/accounts" element={<AccountsPage />} />
+        <Route path="/currency-exchange" element={<CurrencyExchangePage />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="*" element={<Navigate to="/purchases" replace />} />
+      </Route>
+    </Routes>
   );
 }

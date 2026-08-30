@@ -4,8 +4,9 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Module 0 — Foundation: complete. Module 1 — Capital and currency: complete.**
-211 tests passing.
+**Module 0 — Foundation: complete. Module 1 — Capital and currency: complete.
+Module 2 — Purchasing and counterparty payments: complete.**
+345 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -19,6 +20,14 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 | 1.2 Withdrawals (WDW) | done |
 | 1.3 Currency exchange (CEX) | done |
 | 1.4 Currency FIFO service | done |
+| 2.1 Product master (minimal), suppliers, cargo companies | done |
+| 2.2 Purchase (PUR) — order, lines, CNY totals | done |
+| 2.3 Logistics status machine (§6, 16 stages) | done |
+| 2.4 Supplier ledger, payable recognition, payment status | done |
+| 2.5 Supplier payment (SPY) — currency FIFO, FX result | done |
+| 2.6 Cargo payment (CPY) — USD till or som at a stated rate | done |
+| 2.7 Alerts (§39, the part Module 2 can observe) | done |
+| 2.8 Mobile-first UI: purchase list and card, SPY/CPY, ledgers | done |
 
 Module 0 acceptance criteria:
 
@@ -40,12 +49,39 @@ Module 1 acceptance criteria:
 | 4 | Reverse CEX computes FX gain and loss | `test/currency-exchange.spec.ts` — gain, loss and break-even |
 | 5 | Every amount is Decimal; no float anywhere | `test/decimal-money.spec.ts` — source scan, API boundary, arithmetic |
 
-### Still missing from the specification's inputs
+Module 2 acceptance criteria:
 
-- `CLAUDE.md` — the working rules the specification says to follow.
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | A confirmed order books the payable in CNY at the reference rate | `test/supplier-payments.spec.ts` |
+| 2 | A payment consumes currency FIFO and records the FX result (§10.2) | `test/supplier-payments.spec.ts` — debt at 13.00 paid from 13.00 + 14.00 layers → −5 000 KGS |
+| 3 | Paying more than the debt leaves an advance, not a negative debt (§4.3) | `test/supplier-payments.spec.ts` |
+| 4 | Logistics moves one step for staff, any step for the OWNER, audited (§6) | `test/purchases.spec.ts` |
+| 5 | A short currency till refuses the payment and says to buy currency first | `test/supplier-payments.spec.ts`, and the UI links straight to CEX |
+| 6 | Cargo payment in som records the rate; in USD it uses the FIFO cost (§5.2) | `test/cargo-payments.spec.ts` |
+
+Module 2 also added the payment-status read model (`test/purchase-view.spec.ts`)
+and the §39 alerts (`test/notifications.spec.ts`).
 
 ### Open questions
 
+- **The payable is recognised in CNY at the reference rate of the day the
+  order is confirmed** (§4.2, §10.1), and a later payment's FX result is
+  measured against that. The knowledge base states the debt is a yuan debt and
+  §10.2 requires an FX result, but does not say which rate anchors it. The
+  supplier ledger therefore carries a weighted-average KGS value over the open
+  debt, so a fully paid supplier nets to zero on both columns. Worth
+  confirming before Module 3 reduces a payable for a short delivery (§8.3).
+- **Cargo cost is not recognised in Module 2.** §5.2 recognises it at Receipt,
+  which is Module 3, so a CPY made now leaves a positive balance — a deposit
+  held with the carrier. The cargo-debt alert therefore stays silent until
+  Module 3 lands.
+- **A minimal product master** (SKU, name, weight) stands in for §12-Б, which
+  is deferred. A purchase line refuses an unknown or retired product.
+- **§39 lists thirteen alerts; three are implemented** — supplier debt, cargo
+  debt and a currency till below its threshold. The other ten depend on
+  modules that do not exist yet and are deliberately not stubbed: an alert
+  that never fires reads as covered.
 - **GOLD and VIP category thresholds, and the default bonus rate**, are seeded
   as null. §12 marks the first two "кийин такталат" and §23 leaves the rate to
   OWNER configuration, so reading one fails loudly rather than defaulting to
@@ -79,6 +115,7 @@ apps/api/                 NestJS + Prisma API
     migrations/0_init/      verbatim copy of db/egomot_schema.sql
     migrations/1_append_only_logs/
     migrations/2_idempotency_keys/
+    migrations/3_purchases_and_notifications/
                             each carries a down.sql alongside migration.sql
     seed.ts                 bootstrap OWNER, accounts, setting keys
   src/
@@ -87,17 +124,35 @@ apps/api/                 NestJS + Prisma API
     auth/                   login, JWT, PIN
     business-days/          Period Lock
     capital/                CAP, investors (§3)
+    cargo-payments/         CPY and the cargo ledger (§5.2)
     common/                 guards, decorators, Decimal and hashing helpers
+    counterparties/         suppliers and cargo companies
     idempotency/            duplicate-request protection (Connectivity)
-    currency/               CEX and the currency FIFO service (§10-А)
+    currency/               CEX, the currency FIFO service and the
+                            reference rate (§10-А, §10.1)
     documents/              numbering, status machine, posting registry
+    ledgers/                supplier and cargo ledgers (§4.3, §5.2)
+    notifications/          in-app alerts and the daily digest (§39)
+    products/               minimal product master
+    purchase-view/          purchase list and card read model (§4.2)
+    purchases/              PUR and the §6 logistics stages
     reports/                Cash Flow classification (§3.1.5)
     security/               Security Log
     settings/               global parameters
+    supplier-payments/      SPY, FIFO consumption, FX result (§4.3, §10.2)
     transfers/              TRN
     withdrawals/            WDW (§3.1)
   test/                     integration tests against a real database
-apps/web/                 React 19 + Vite 6 PWA
+apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
+  src/
+    api/                    fetch client and response types
+    auth/                   token storage and the current user
+    components/             shell, badges, money rendering, till picker
+    hooks/                  GET helper, unread-alert poll
+    pages/                  login, purchases, counterparties, payments,
+                            tills, CEX, alerts
+  test/                     decimal-string helpers (the only client-side
+                            code that looks at money)
 db/egomot_schema.sql      the authoritative data model
 deploy/                   systemd units and an nginx config
 docker-compose.yml        postgres + api + web
@@ -144,8 +199,11 @@ They run against a real database (`egomot_test` by default; override with
 
 ```bash
 createdb egomot_test
-npm test
+npm test          # API integration tests, then the client's unit tests
 ```
+
+The client's tests need no database — `npm run test -w @egomot/web` on its own
+runs them.
 
 `npm run db:verify` builds one database from `db/egomot_schema.sql` and another
 from the migrations, then diffs them — the reference SQL and the migrations

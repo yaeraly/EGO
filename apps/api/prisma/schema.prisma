@@ -750,6 +750,7 @@ model purchases {
   documents               documents                 @relation(fields: [document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   suppliers               suppliers                 @relation(fields: [supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   receipts                receipts[]
+  supplier_payments       supplier_payments[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -994,9 +995,13 @@ model supplier_payments {
   prepay_part_cny  Decimal          @default(0) @db.Decimal(14, 2)
   fx_gain_loss_kgs Decimal          @default(0) @db.Decimal(14, 2)
   channel          String?
+  purchase_id      String?          @db.Uuid
   documents        documents        @relation(fields: [document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   payment_accounts payment_accounts @relation(fields: [from_account], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  purchases        purchases?       @relation(fields: [purchase_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction)
   suppliers        suppliers        @relation(fields: [supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([purchase_id], map: "idx_spy_purchase")
 }
 
 model suppliers {
@@ -1038,6 +1043,7 @@ model users {
   handover_acts_handover_acts_to_userTousers                 handover_acts[]           @relation("handover_acts_to_userTousers")
   idempotency_keys                                           idempotency_keys[]
   inventory_lines                                            inventory_lines[]
+  notifications                                              notifications[]
   payment_accounts                                           payment_accounts[]
   purchase_status_history                                    purchase_status_history[]
   reservations                                               reservations[]
@@ -1150,6 +1156,21 @@ model idempotency_keys {
 
   @@id([key, user_id])
   @@index([created_at], map: "idx_idempotency_created")
+}
+
+model notifications {
+  id         BigInt    @id @default(autoincrement())
+  user_id    String    @db.Uuid
+  kind       String
+  title      String
+  body       String
+  payload    Json?
+  dedupe_key String
+  read_at    DateTime? @db.Timestamptz(6)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([user_id, dedupe_key])
 }
 
 enum account_type {

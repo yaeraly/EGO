@@ -74,6 +74,29 @@ export class SettingsService {
    * threshold of zero, and silently treating it as one would misprice every
    * decision that depends on it.
    */
+  /**
+   * Reads a numeric setting, or null when it is unset or absent.
+   *
+   * For settings that are genuinely optional — a threshold nobody has
+   * configured means "do not warn", not an error.
+   */
+  async optionalDecimal(key: SettingKeyName): Promise<Prisma.Decimal | null> {
+    const setting = await this.prismaSafeFind(key);
+    if (
+      !setting ||
+      setting.value === null ||
+      typeof setting.value === 'object' ||
+      (typeof setting.value !== 'number' && typeof setting.value !== 'string')
+    ) {
+      return null;
+    }
+    return new Prisma.Decimal(setting.value);
+  }
+
+  private prismaSafeFind(key: string): Promise<settings | null> {
+    return this.repository.findByKey(key);
+  }
+
   async requireDecimal(key: SettingKeyName): Promise<Prisma.Decimal> {
     const setting = await this.findOne(key);
 

@@ -36,3 +36,13 @@ export function sequenceYear(createdAt: Date = new Date()): number {
   }).format(createdAt);
   return Number(year);
 }
+
+/** Today's calendar date in Bishkek, as YYYY-MM-DD. */
+export function bishkekDateKey(at: Date = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(at);
+}
