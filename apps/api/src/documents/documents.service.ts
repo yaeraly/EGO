@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, doc_status, doc_type, documents } from '@prisma/client';
 import { AuditService, Db } from '../audit/audit.service';
+import { BusinessDaysService } from '../business-days/business-days.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { DocumentPostingRegistry } from './document-posting.registry';
 import { formatDocumentNumber, sequenceYear } from './document-number';
@@ -27,6 +28,7 @@ export class DocumentsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly posting: DocumentPostingRegistry,
+    private readonly businessDays: BusinessDaysService,
   ) {}
 
   /**
@@ -81,6 +83,10 @@ export class DocumentsService {
     tx: Prisma.TransactionClient,
     params: CreateDocumentParams,
   ): Promise<documents> {
+    // Period Lock first: a closed day must refuse the document before a
+    // sequence number is spent on it.
+    await this.businessDays.ensureOpen(tx, params.businessDate);
+
     const year = sequenceYear(params.businessDate);
     const sequence = await this.nextSequence(tx, params.docType, year);
 
