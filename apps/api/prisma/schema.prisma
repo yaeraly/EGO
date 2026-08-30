@@ -1,0 +1,22 @@
+// EGOMOT — Prisma schema
+//
+// STATUS: skeleton only.
+//
+// Per the technical spec (Module 0.1), the data model is generated FROM
+// `db/egomot_schema.sql`, which is the authoritative reference ("эталон").
+// That file is not yet present in this repository, so no models are declared
+// here — guessing table/column names would silently diverge from the
+// reference and invalidate every module built on top of it.
+//
+// Once db/egomot_schema.sql lands, the models are derived from it via
+// `prisma db pull` against a database created from that SQL, then reviewed
+// field-by-field against the reference.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

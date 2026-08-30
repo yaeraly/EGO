@@ -1,0 +1,22 @@
+{
+  "name": "egomot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EGOMOT — business management system",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:api": "npm run dev --workspace @egomot/api",
+    "dev:web": "npm run dev --workspace @egomot/web",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspace @egomot/api",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:generate": "npm run prisma:generate --workspace @egomot/api",
+    "db:migrate": "npm run prisma:migrate --workspace @egomot/api"
+  }
+}

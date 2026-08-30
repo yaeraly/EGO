@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: egomot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-egomot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-egomot_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-egomot}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # db/egomot_schema.sql is applied here on first boot once it is added.
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-egomot} -d ${POSTGRES_DB:-egomot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: egomot-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      API_PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-egomot}:${POSTGRES_PASSWORD:-egomot_dev_password}@postgres:5432/${POSTGRES_DB:-egomot}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/prisma:/app/apps/api/prisma
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: egomot-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      WEB_PORT: 5173
+      VITE_API_URL: http://api:3000
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/index.html:/app/apps/web/index.html
+
+volumes:
+  postgres_data:
