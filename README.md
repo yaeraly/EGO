@@ -99,27 +99,42 @@ apps/api/                 NestJS + Prisma API
   test/                     integration tests against a real database
 apps/web/                 React 19 + Vite 6 PWA
 db/egomot_schema.sql      the authoritative data model
+deploy/                   systemd units and an nginx config
 docker-compose.yml        postgres + api + web
+scripts/install-ubuntu.sh one-command Ubuntu install
 ```
 
-## Running
+## Installing
+
+On Ubuntu, one command from a fresh clone:
+
+```bash
+git clone https://github.com/yaeraly/EGO.git egomot
+cd egomot
+./scripts/install-ubuntu.sh
+```
+
+It installs Node 22 and PostgreSQL, creates the two database roles, applies the
+migrations, writes a `.env` with generated passwords, seeds the first OWNER, and
+builds both apps — then verifies that the application's role is not a superuser
+and that `audit_log` is still append-only.
+
+With Docker instead:
 
 ```bash
 cp .env.example .env      # then set BOOTSTRAP_OWNER_* and JWT_SECRET
 docker compose up
+docker compose exec api npx prisma db seed
 ```
 
-API on `http://localhost:3000/api`, web on `http://localhost:5173`.
+**`docs/INSTALL.md`** covers the manual steps, systemd and nginx for
+production, backups, upgrades and troubleshooting.
 
-Without Docker, against a reachable PostgreSQL 16:
+## Running
 
 ```bash
-npm install
-npm run db:migrate                                  # applies the reference schema
-npm run db:generate
-npm run prisma:seed --workspace @egomot/api         # first OWNER, accounts, settings
-npm run dev:api
-npm run dev:web
+npm run dev:api    # API → http://localhost:3000/api
+npm run dev:web    # web → http://localhost:5173
 ```
 
 ### Tests
@@ -141,14 +156,18 @@ must never drift apart.
 `audit_log` and `security_log` are append-only, enforced by privileges rather
 than by application discipline. Migration `1_append_only_logs` creates the
 `egomot_app` role with `SELECT`/`INSERT` on both logs and no `UPDATE`/`DELETE`.
-Grant it to the application's login user:
+
+So a deployment uses two roles: an owner that runs migrations and seeds, and a
+non-superuser application role that is a member of `egomot_app`:
 
 ```sql
 GRANT egomot_app TO <application_user>;
 ```
 
 **The application user must not be a superuser** — superusers bypass every
-privilege check, which would make the guarantee decorative.
+privilege check, which would make the guarantee decorative. The install script
+sets both roles up and refuses to finish if the application role turns out to
+be a superuser.
 
 ## Conventions
 

@@ -1,0 +1,43 @@
+# EGOMOT API — systemd unit үлгүсү
+#
+# Орнотуу:
+#   sudo cp deploy/egomot-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now egomot-api
+#
+# WorkingDirectory менен User'ди өз орнотууңа ылайыктап оңдо.
+
+[Unit]
+Description=EGOMOT API
+Documentation=https://github.com/yaeraly/EGO
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=egomot
+Group=egomot
+WorkingDirectory=/opt/egomot
+
+# .env ичинде DATABASE_URL жана JWT_SECRET бар. Ал ЧЕКТЕЛГЕН база
+# колдонуучусу менен туташат — миграция ролу менен эмес.
+EnvironmentFile=/opt/egomot/.env
+
+ExecStart=/usr/bin/node apps/api/dist/main.js
+Restart=on-failure
+RestartSec=5
+
+# Сырлар журналга чыкпашы үчүн стандарттык агымдар journald'га гана барат.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=egomot-api
+
+# Катаңдатуу: тиркемеге өз каталогунан тышкары жазуу керек эмес.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/egomot
+
+[Install]
+WantedBy=multi-user.target

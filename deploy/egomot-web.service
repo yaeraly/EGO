@@ -1,0 +1,33 @@
+# EGOMOT web (статикалык PWA) — systemd unit үлгүсү
+#
+# Продакшнда `vite preview` ордуна nginx колдонуу туурараак
+# (docs/INSTALL.md → nginx бөлүмүн кара). Бул unit кичине орнотуулар
+# же ички тармак үчүн жетиштүү.
+
+[Unit]
+Description=EGOMOT web
+After=network.target egomot-api.service
+
+[Service]
+Type=simple
+User=egomot
+Group=egomot
+WorkingDirectory=/opt/egomot
+EnvironmentFile=/opt/egomot/.env
+
+ExecStart=/usr/bin/npm run preview --workspace @egomot/web
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=egomot-web
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/egomot
+
+[Install]
+WantedBy=multi-user.target
