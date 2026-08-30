@@ -96,9 +96,9 @@ $SUDO systemctl enable --now postgresql >/dev/null 2>&1 \
   || $SUDO pg_ctlcluster "$(pg_lsclusters -h 2>/dev/null | awk 'NR==1{print $1}')" main start >/dev/null 2>&1 \
   || true
 pg_isready -q || die "PostgreSQL иштебей жатат"
-ok "$($SUDO -u postgres psql -tAc 'SHOW server_version' | tr -d ' ') иштеп жатат"
+ok "$(as_postgres -tAc 'SHOW server_version' | tr -d ' ') иштеп жатат"
 
-# --- 4. Ролдор жана база ----------------------------------------------------
+# --- 4. Конфигурация жана база ролдору --------------------------------------
 #
 # Эки роль атайын ажыратылган:
 #
@@ -109,48 +109,80 @@ ok "$($SUDO -u postgres psql -tAc 'SHOW server_version' | tr -d ' ') иштеп 
 # Бул ажыратуу audit_log/security_log'дун append-only болушун камсыздайт:
 # superuser бардык укук текшерүүсүн айланып өтөт, ошондуктан тиркеме
 # superuser болсо, 1-миграциянын кепилдиги жөн эле кооздук болуп калмак.
+#
+# .env менен ролдор бирге каралат, анткени пароль экөөндө тең болушу керек:
+#
+#   .env бар    → пароль ошондон алынат, ролдун паролу тийилбейт.
+#   .env жок    → жаңы пароль берилет; роль мурдатан бар болсо, паролу
+#                 жаңыртылат. Пароль .env'ден башка эч жерде сакталбагандыктан,
+#                 аны жаңыртуу эч нерсени бузбайт — жарым-жартылай өткөн
+#                 орнотуудан кийин кайра иштетүү ушуга таянат.
 
-say "База жана ролдор"
+say "Конфигурация жана база ролдору"
 
-owner_exists=$(as_postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_OWNER'" || true)
-if [ "$owner_exists" = "1" ]; then
-  ok "Роль $DB_OWNER бар"
-  OWNER_PASS=""
-else
-  OWNER_PASS="$(new_password)"
-  as_postgres -c "CREATE ROLE $DB_OWNER LOGIN CREATEROLE PASSWORD '$OWNER_PASS';" >/dev/null
-  ok "Роль $DB_OWNER түзүлдү (CREATEROLE, superuser эмес)"
-fi
-
-app_exists=$(as_postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_APP_USER'" || true)
-if [ "$app_exists" = "1" ]; then
-  ok "Роль $DB_APP_USER бар"
-  APP_PASS=""
-else
-  APP_PASS="$(new_password)"
-  as_postgres -c "CREATE ROLE $DB_APP_USER LOGIN PASSWORD '$APP_PASS';" >/dev/null
-  ok "Роль $DB_APP_USER түзүлдү (superuser эмес)"
-fi
-
-db_exists=$(as_postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$DB'" || true)
-if [ "$db_exists" = "1" ]; then
-  ok "База $DB бар"
-else
-  as_postgres -c "CREATE DATABASE $DB OWNER $DB_OWNER;" >/dev/null
-  ok "База $DB түзүлдү"
-fi
-
-# --- 5. .env ---------------------------------------------------------------
-
-say "Конфигурация (.env)"
 ENV_FILE="$ROOT/.env"
 
+# postgresql://user:pass@host:port/db?params
+url_field() { printf '%s' "$1" | sed -nE "s#^[a-z]+://([^:]+):([^@]+)@[^/]+/([^?]+).*#\\$2#p"; }
+
+role_exists() {
+  [ "$(as_postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$1'" || true)" = "1" ]
+}
+
 if [ -f "$ENV_FILE" ]; then
-  ok ".env бар — өзгөртүлбөйт"
-  warn "Жаңы пароль керек болсо .env'ди өчүрүп, скриптти кайра иштет"
+  ok ".env бар — сакталып калат"
+  set -a; . "$ENV_FILE"; set +a
+
+  MIG_URL="${MIGRATION_DATABASE_URL:-${DATABASE_URL:-}}"
+  [ -n "${DATABASE_URL:-}" ] || die ".env ичинде DATABASE_URL жок"
+
+  # Ролдор менен база атын .env'ден алабыз: скрипттин демейкилери менен
+  # айырмаланып, эки башка орнотуу пайда болуп кетпеши үчүн.
+  DB_APP_USER="$(url_field "$DATABASE_URL" 1)"
+  APP_PASS="$(url_field "$DATABASE_URL" 2)"
+  DB="$(url_field "$DATABASE_URL" 3)"
+  DB_OWNER="$(url_field "$MIG_URL" 1)"
+  OWNER_PASS="$(url_field "$MIG_URL" 2)"
+
+  if [ -z "$DB_APP_USER" ] || [ -z "$DB" ] || [ -z "$DB_OWNER" ]; then
+    die ".env ичиндеги DATABASE_URL окулбады. Күтүлгөн түр:
+    postgresql://колдонуучу:пароль@хост:5432/база?schema=public"
+  fi
+
+  # Жок ролду .env'деги пароль менен түзөбүз; бар ролду тийбейбиз, анткени
+  # анын паролу .env'дегидей деп ишенебиз.
+  if role_exists "$DB_OWNER"; then
+    ok "Роль $DB_OWNER бар"
+  else
+    as_postgres -c "CREATE ROLE $DB_OWNER LOGIN CREATEROLE PASSWORD '$OWNER_PASS';" >/dev/null
+    ok "Роль $DB_OWNER .env'деги пароль менен түзүлдү"
+  fi
+
+  if role_exists "$DB_APP_USER"; then
+    ok "Роль $DB_APP_USER бар"
+  else
+    as_postgres -c "CREATE ROLE $DB_APP_USER LOGIN PASSWORD '$APP_PASS';" >/dev/null
+    ok "Роль $DB_APP_USER .env'деги пароль менен түзүлдү"
+  fi
 else
-  [ -n "$OWNER_PASS" ] || die ".env жок, бирок $DB_OWNER ролу мурдатан бар — паролун билбейм. Ролду өчүр же .env'ди колдо жаз."
-  [ -n "$APP_PASS" ]   || die ".env жок, бирок $DB_APP_USER ролу мурдатан бар — паролун билбейм. Ролду өчүр же .env'ди колдо жаз."
+  OWNER_PASS="$(new_password)"
+  APP_PASS="$(new_password)"
+
+  if role_exists "$DB_OWNER"; then
+    as_postgres -c "ALTER ROLE $DB_OWNER LOGIN CREATEROLE PASSWORD '$OWNER_PASS';" >/dev/null
+    warn "Роль $DB_OWNER мурдатан бар — паролу жаңыртылды (эски пароль .env менен кошо жоголгон)"
+  else
+    as_postgres -c "CREATE ROLE $DB_OWNER LOGIN CREATEROLE PASSWORD '$OWNER_PASS';" >/dev/null
+    ok "Роль $DB_OWNER түзүлдү (CREATEROLE, superuser эмес)"
+  fi
+
+  if role_exists "$DB_APP_USER"; then
+    as_postgres -c "ALTER ROLE $DB_APP_USER LOGIN PASSWORD '$APP_PASS';" >/dev/null
+    warn "Роль $DB_APP_USER мурдатан бар — паролу жаңыртылды"
+  else
+    as_postgres -c "CREATE ROLE $DB_APP_USER LOGIN PASSWORD '$APP_PASS';" >/dev/null
+    ok "Роль $DB_APP_USER түзүлдү (superuser эмес)"
+  fi
 
   JWT_SECRET="$(new_password)$(new_password)"
   BOOTSTRAP_PASSWORD="$(new_password)"
@@ -189,6 +221,17 @@ ENV
   ok ".env түзүлдү (паролдор кокус берилди)"
 fi
 
+# --- 5. База ---------------------------------------------------------------
+
+say "Маалымат базасы"
+if [ "$(as_postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$DB'" || true)" = "1" ]; then
+  ok "База $DB бар"
+else
+  as_postgres -c "CREATE DATABASE $DB OWNER $DB_OWNER;" >/dev/null
+  ok "База $DB түзүлдү"
+fi
+
+# Эки тармакта тең (.env бар болсо да, жаңы түзүлсө да) жүктөйбүз.
 set -a; . "$ENV_FILE"; set +a
 MIGRATION_URL="${MIGRATION_DATABASE_URL:-$DATABASE_URL}"
 

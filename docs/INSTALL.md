@@ -269,6 +269,41 @@ sudo systemctl start egomot-api
 **`permission denied to create role`**
 Миграция ролунда `CREATEROLE` жок. `ALTER ROLE egomot_owner CREATEROLE;`
 
+**`.env жок, бирок egomot_owner ролу мурдатан бар — паролун билбейм`**
+Эски версиянын катасы: жарым-жартылай өткөн орнотуудан кийин ролдор калып,
+`.env` жок болсо, скрипт токтоп калчу. Азыр мындай учурда роль паролу жаңыдан
+берилет. Жаңы версияны ал:
+
+```bash
+git pull
+./scripts/install-ubuntu.sh
+```
+
+Эгер эски скрипт менен калып калсаң, ролдорду өчүрүп кайра баштоо да иштейт:
+
+```bash
+sudo -u postgres psql <<'SQL'
+DROP DATABASE IF EXISTS egomot;
+DROP OWNED BY egomot_app_user;
+DROP ROLE IF EXISTS egomot_app_user;
+DROP ROLE IF EXISTS egomot_owner;
+DROP ROLE IF EXISTS egomot_app;
+SQL
+```
+
+**Скриптти кайра иштетүү коопсузбу?**
+Ооба. Төрт учур тең каралган:
+
+| `.env` | Ролдор | Скрипт эмне кылат |
+|---|---|---|
+| бар | бар | эч нерсе тийбейт |
+| бар | жок | ролдорду `.env`'деги пароль менен түзөт |
+| жок | бар | жаңы пароль берип, ролдорду жаңыртат |
+| жок | жок | баарын жаңыдан түзөт |
+
+`.env` бар болсо, база менен ролдордун аттары ошондон алынат — скрипттин
+демейкилери менен айырмаланып, эки башка орнотуу пайда болуп кетпеши үчүн.
+
 **`Can't reach database server`**
 `pg_isready` менен текшер. Башка машинадан туташсаң,
 `/etc/postgresql/*/main/postgresql.conf` ичинде `listen_addresses` жана
