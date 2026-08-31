@@ -32,9 +32,21 @@ if [ -n "$CONFLICTED$MARKED" ]; then
   bad "Чечилбеген merge конфликт бар:"
   printf '%s\n%s\n' "$CONFLICTED" "$MARKED" | sort -u | sed '/^$/d' | sed 's/^/       /'
   if printf '%s\n%s' "$CONFLICTED" "$MARKED" | grep -q 'apps/api/prisma/schema.prisma'; then
+    SCHEMA_FILE=apps/api/prisma/schema.prisma
     say ""
-    say "schema.prisma — генерацияланган файл (db/README.md), кол менен оңдолбойт:"
-    say "    git checkout -- apps/api/prisma/schema.prisma"
+    say "schema.prisma — генерацияланган файл (db/README.md), кол менен оңдолбойт."
+    if git show "HEAD:$SCHEMA_FILE" 2>/dev/null | grep -qE '^(<{7}|>{7}) '; then
+      # The markers were committed, so restoring "the committed version" gives
+      # them straight back. The good copy is the one on the remote branch.
+      BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+      say "Белгилер коммитке кирип кеткен — origin'догу таза нускасын алыңыз:"
+      say "    git fetch origin $BRANCH"
+      say "    git checkout origin/$BRANCH -- $SCHEMA_FILE"
+      say "    git commit -m 'fix: restore generated schema.prisma'"
+    else
+      say "Иштеп жаткан көчүрмөдө гана — коммиттегисин кайтарыңыз:"
+      say "    git checkout -- $SCHEMA_FILE"
+    fi
   fi
 else
   ok "Merge конфликт жок."
