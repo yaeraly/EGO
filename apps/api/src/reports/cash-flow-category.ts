@@ -33,6 +33,9 @@ const CATEGORIES: Partial<Record<doc_type, CashFlowCategory>> = {
   // §26 — rent, internet, stationery. Batch freight is not here: §9 puts it
   // into the landed cost, where it belongs.
   [doc_type.EXP]: CashFlowCategory.OPERATING,
+  // §25 — a salary is an operating expense. §3.1.6 keeps it apart from an
+  // owner's withdrawal, which is why the two never share a document type.
+  [doc_type.SLR]: CashFlowCategory.OPERATING,
   [doc_type.CEX]: CashFlowCategory.INTERNAL_TRANSFER,
 };
 

@@ -39,6 +39,7 @@ import { InventoriesModule } from './inventories/inventories.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { DefectsModule } from './defects/defects.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { SalariesModule } from './salaries/salaries.module';
 import { ReturnsModule } from './returns/returns.module';
 import { WriteOffsModule } from './write-offs/write-offs.module';
 import { PurchaseViewModule } from './purchase-view/purchase-view.module';
@@ -80,6 +81,7 @@ enableBigIntJson();
     ReturnsModule,
     DefectsModule,
     ExpensesModule,
+    SalariesModule,
     WriteOffsModule,
     InventoriesModule,
     HandoversModule,

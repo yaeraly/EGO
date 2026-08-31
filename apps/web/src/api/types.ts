@@ -902,3 +902,30 @@ export interface MonthlySpend {
   remaining: string | null;
   over_budget: boolean;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Module 11 — salary payment (SLR), §25
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface SalaryPayment {
+  document_id: string;
+  employee: { id: string; full_name: string };
+  /** YYYY-MM, the month being paid for. */
+  period: string;
+  base_amount: string;
+  bonus_amount: string;
+  advance_amount: string;
+  deduction: string;
+  total_paid: string;
+  account: { id: string; name: string };
+  documents: { doc_number: string; status: string; business_date: string };
+}
+
+export interface SalaryPeriodRow {
+  employee_id: string;
+  full_name: string;
+  base_salary: string;
+  /** Confirmed payments for that month, and how many there were. */
+  paid: string;
+  payments: number;
+}

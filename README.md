@@ -4,12 +4,13 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–10 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–11 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
-returns; defect acts, write-offs and scrap income; operating expenses.
-680 API tests and 11 client tests passing.
+returns; defect acts, write-offs and scrap income; operating expenses;
+salaries.
+691 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -82,6 +83,10 @@ returns; defect acts, write-offs and scrap income; operating expenses.
 | 10.2 Expense (EXP): category, account, amount, comment | done |
 | 10.3 This month's spend against the ceiling | done |
 | 10.4 UI: record an expense, see the month against budget | done |
+| 11.1 Salary payment (SLR): the parts and the total (§25) | done |
+| 11.2 Paying it: only the net leaves the account | done |
+| 11.3 What each employee has been paid for a period | done |
+| 11.4 UI: the month, the parts and the payment | done |
 
 Module 0 acceptance criteria:
 
@@ -237,8 +242,35 @@ Module 10 acceptance criteria:
 | 8 | The month counts confirmed documents only; a draft is a plan, not a cost | `test/expenses.spec.ts` |
 | 9 | A category with no ceiling reports no remainder and is never over budget | `test/expenses.spec.ts` |
 
+Module 11 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §25: total = base + bonus − advance − deduction, computed and never typed in | `test/salaries.spec.ts` |
+| 2 | §25: the employee's own base salary applies when the month states none | `test/salaries.spec.ts` |
+| 3 | Only the net leaves the account, so an advance is not handed over twice | `test/salaries.spec.ts` |
+| 4 | A month with nothing left to pay is refused, and so is a negative part | `test/salaries.spec.ts` |
+| 5 | §42.5: a salary larger than the till holds is refused and the document stays a draft | `test/salaries.spec.ts` |
+| 6 | Salaries are paid in som; another currency is refused | `test/salaries.spec.ts` |
+| 7 | §2: the whole module is the OWNER's — reading it and making one both | `test/salaries.spec.ts` |
+| 8 | §3.1.6: a salary is an operating expense; an owner withdrawal never is | `test/salaries.spec.ts` |
+| 9 | §25: the period summary adds up confirmed payments and counts them | `test/salaries.spec.ts` |
+| 10 | A draft salary counts for nothing | `test/salaries.spec.ts` |
+
 ### Open questions
 
+- **A second salary payment in the same month is allowed** (§25). §25 asks for
+  the history to be kept and says nothing about one payment a month, and
+  settling part early is an ordinary way to pay. So nothing is blocked; the
+  screen shows what has already been paid for that month, with the count, so
+  a double payment is obvious before it is made. Say the word if you want it
+  refused outright.
+- **The bonus is typed in until §23 lands.** `bonus_amount` is a part of the
+  salary document, and the bonus module that would calculate it is the next
+  one in §41's order. Until then the OWNER enters the figure.
+- **An advance reduces the payout but moves no money here.** §25 lists the
+  advance as a component; whatever document handed it over earlier is what
+  took it out of the till, so posting the gross here would pay it twice.
 - **Batch freight is not an expense, and the system cannot tell for you**
   (§26). Freight that belongs to a consignment goes into the landed cost
   through §9; only spending attached to no batch is an operating expense.
@@ -449,6 +481,7 @@ apps/api/                 NestJS + Prisma API
     reports/                Cash Flow classification (§3.1.5)
     security/               Security Log
     settings/               global parameters
+    salaries/               SLR: the parts, the total, the payment (§25)
     sales/                  SAL and LSS: discount rules, FIFO COGS, payment
     stock/                  the only door into layer_stock (§12-А, §42.4-5)
     supplier-payments/      SPY, FIFO consumption, FX result (§4.3, §10.2)
@@ -470,7 +503,7 @@ apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
                             screen, checkout, customers, my sales, the
                             product catalogue and categories, reservations,
                             the count sheet, the handover act, returns,
-                            defect acts, write-offs and expenses
+                            defect acts, write-offs, expenses and salaries
   test/                     decimal-string helpers (the only client-side
                             code that looks at money)
 db/egomot_schema.sql      the authoritative data model

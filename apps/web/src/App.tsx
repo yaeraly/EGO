@@ -26,6 +26,7 @@ import { ProductFormPage } from './pages/ProductFormPage';
 import { ProductPage } from './pages/ProductPage';
 import { DefectsPage, WriteOffsPage } from './pages/DefectsPage';
 import { ExpensesPage } from './pages/ExpensesPage';
+import { SalariesPage } from './pages/SalariesPage';
 import { HandoverPage, HandoversPage } from './pages/HandoversPage';
 import { InventoriesPage } from './pages/InventoriesPage';
 import { InventoryPage } from './pages/InventoryPage';
@@ -94,6 +95,7 @@ function Router() {
         <Route path="/defects" element={<DefectsPage />} />
         <Route path="/write-offs" element={<WriteOffsPage />} />
         <Route path="/expenses" element={<ExpensesPage />} />
+        <Route path="/salaries" element={<SalariesPage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/products/:id" element={<ProductStockPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />
