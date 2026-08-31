@@ -37,6 +37,7 @@ import { AdvancesModule } from './advances/advances.module';
 import { HandoversModule } from './handovers/handovers.module';
 import { InventoriesModule } from './inventories/inventories.module';
 import { ReservationsModule } from './reservations/reservations.module';
+import { ReturnsModule } from './returns/returns.module';
 import { PurchaseViewModule } from './purchase-view/purchase-view.module';
 import { PurchasesModule } from './purchases/purchases.module';
 import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.module';
@@ -73,6 +74,7 @@ enableBigIntJson();
     CounterpartiesModule,
     ProductsModule,
     ReservationsModule,
+    ReturnsModule,
     InventoriesModule,
     HandoversModule,
     AdvancesModule,

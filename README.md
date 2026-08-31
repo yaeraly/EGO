@@ -4,11 +4,12 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–7 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–8 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
-reservations and customer advances; inventory and warehouse handover.
-646 API tests and 11 client tests passing.
+reservations and customer advances; inventory and warehouse handover;
+returns.
+660 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -67,6 +68,11 @@ reservations and customer advances; inventory and warehouse handover.
 | 7.3 Full-count schedule and its overdue alert (§22, §39) | done |
 | 7.4 Handover act (HND): system-chosen sample, two signatures (§21) | done |
 | 7.5 UI: the count sheet and the handover act | done |
+| 8.1 Return (RET) against its sale, partial and full (§35.1, §35.7) | done |
+| 8.2 §18.0 restock: original cost, today's date, a new layer | done |
+| 8.3 Debt offset, split refund and its source (§35.4, §35.5) | done |
+| 8.4 §36-А.2 warranty check on a defect return | done |
+| 8.5 UI: pick the sale, the lines and the condition; settle | done |
 
 Module 0 acceptance criteria:
 
@@ -178,8 +184,34 @@ Module 7 acceptance criteria:
 | 9 | §21.1: a handover records its difference and corrects no stock — §22 does that | `test/inventories.spec.ts` |
 | 10 | §27.1: neither a confirmed count nor a signed act can be re-typed | `test/inventories.spec.ts` |
 
+Module 8 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §35.1: a return names its sale, and a line not on that sale is refused | `test/returns.spec.ts` |
+| 2 | §35.7: never more than was sold, counting what already came back | `test/returns.spec.ts` |
+| 3 | §18.0: the goods return at the cost they left at, as a new layer dated today; the old LOT is not refilled and a later, dearer batch changes nothing | `test/returns.spec.ts` |
+| 4 | §42.12: a defective item goes to DEFECT, never back to MAIN | `test/returns.spec.ts` |
+| 5 | §35.4: the open debt is settled first and only the remainder is paid out — 1 500 returned against a 1 000 debt leaves 350 in cash | `test/returns.spec.ts` |
+| 6 | §35.5: the account that was paid needs no reason; another account does, and the line records it | `test/returns.spec.ts` |
+| 7 | §35.6, §42.5: a till that cannot cover the refund refuses, and the document stays a draft | `test/returns.spec.ts` |
+| 8 | A return always takes a PIN | `test/returns.spec.ts` |
+| 9 | §36-А.2: inside the warranty a defect return is ordinary; past it a salesperson cannot confirm at all and the OWNER only with a reason, which is stored | `test/returns.spec.ts` |
+| 10 | §35.8, §35.1.2: revenue and COGS reversed are recorded and the sale line marks what came back, while the sale itself is untouched | `test/returns.spec.ts` |
+
 ### Open questions
 
+- **The warranty test is made in dates** (§36-А.2). "Return Date ≤ Sale Date +
+  Warranty Days" compares dates, so a same-day defect on a product with a
+  zero-day term is inside the warranty rather than a day late. Times of day do
+  not enter into it.
+- **A return records what came back on the sale line, and leaves the sale
+  alone.** §35.1.2 forbids editing the original sale; `sale_items.returned_qty`
+  is the column the schema provides for exactly this, and the turnover and
+  report queries already net it off.
+- **The refund settles debts oldest-first across all of them** (§35.4), not
+  only the sale being returned — §35.4 says the offset follows §16-А's
+  allocation, and that is the rule §16-А states.
 - **The A-class list is expressed as categories** (§21.1). §21.1 leaves the
   list to the OWNER and names motors, batteries and controllers — which are
   categories, and Module 5 gave the system categories. So
@@ -349,6 +381,7 @@ apps/api/                 NestJS + Prisma API
     purchases/              PUR and the §6 logistics stages
     receipts/               RCV, landed cost, LOT and FIFO layers (§7, §9, §18.1)
     reservations/           RSV: the hold, its policy and expiry (§17)
+    returns/                RET: restock, debt offset, refund (§35)
     reports/                Cash Flow classification (§3.1.5)
     security/               Security Log
     settings/               global parameters
@@ -371,7 +404,7 @@ apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
                             transfers, discrepancies, claims, the sale
                             screen, checkout, customers, my sales, the
                             product catalogue and categories, reservations,
-                            the count sheet and the handover act
+                            the count sheet, the handover act and returns
   test/                     decimal-string helpers (the only client-side
                             code that looks at money)
 db/egomot_schema.sql      the authoritative data model

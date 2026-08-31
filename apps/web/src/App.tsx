@@ -28,6 +28,7 @@ import { HandoverPage, HandoversPage } from './pages/HandoversPage';
 import { InventoriesPage } from './pages/InventoriesPage';
 import { InventoryPage } from './pages/InventoryPage';
 import { ProductsPage } from './pages/ProductsPage';
+import { ReturnFormPage, ReturnsPage } from './pages/ReturnsPage';
 import { ReservationPage } from './pages/ReservationPage';
 import {
   ReservationFormPage,
@@ -86,6 +87,8 @@ function Router() {
         <Route path="/inventories/:id" element={<InventoryPage />} />
         <Route path="/handovers" element={<HandoversPage />} />
         <Route path="/handovers/:id" element={<HandoverPage />} />
+        <Route path="/returns" element={<ReturnsPage />} />
+        <Route path="/returns/new" element={<ReturnFormPage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/products/:id" element={<ProductStockPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />

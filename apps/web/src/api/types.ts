@@ -767,3 +767,64 @@ export interface Handover {
     business_date: string;
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Module 8 — return (RET), §35 and the §36-А.2 warranty check
+// ─────────────────────────────────────────────────────────────────────────
+
+export type ReturnCondition = 'RESALABLE' | 'DEFECT';
+
+export interface ReturnDoc {
+  document: {
+    id: string;
+    doc_number: string;
+    status: string;
+    business_date: string;
+    comment: string | null;
+  };
+  original_sale: { id: string; doc_number: string };
+  customer: { id: string; name: string };
+  reason: string;
+  total_return_amount: string;
+  debt_offset: string;
+  cash_refund: string;
+  items: {
+    id: string;
+    sale_item_id: string;
+    sku: string;
+    name: string;
+    qty: string;
+    condition: ReturnCondition;
+    original_price: string;
+    original_unit_cost: string;
+    /** §36-А.2 — null unless the line is a defect return. */
+    warranty_ok: boolean | null;
+    owner_exception_reason: string | null;
+    new_layer_id: string | null;
+  }[];
+  refunds: {
+    account_id: string;
+    account_name: string;
+    amount: string;
+    source_override_reason: string | null;
+  }[];
+}
+
+/** One sale as `GET /sales/:id` returns it — the shape a return works from. */
+export interface SaleDetail {
+  document_id: string;
+  customer_id: string;
+  total_amount: string;
+  outstanding_amount: string;
+  customers: { id: string; name: string; is_walk_in: boolean };
+  sale_items: {
+    id: string;
+    product_id: string;
+    qty: string;
+    returned_qty: string;
+    final_price: string;
+    fifo_cogs: string;
+    products: { sku: string; name: string };
+  }[];
+  sale_payment_lines: { account_id: string; amount: string }[];
+}
