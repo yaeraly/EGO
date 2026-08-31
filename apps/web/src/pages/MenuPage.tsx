@@ -19,6 +19,7 @@ const ENTRIES: Entry[] = [
   { to: '/accounts', icon: '💰', label: 'Кассалар', hint: 'Баланстар, валюта сатып алуу (CEX)' },
   { to: '/expenses', icon: '🧾', label: 'Чыгымдар', hint: 'Операциялык чыгымдар жана бюджет (§26)' },
   { to: '/salaries', icon: '👛', label: 'Айлык', hint: 'Кызматкерлердин айлыгы (§25)', ownerOnly: true },
+  { to: '/bonuses', icon: '🎯', label: 'Сатуучунун бонусу', hint: 'Маржадан бонус, BON төлөм (§23)', ownerOnly: true },
   { to: '/suppliers', icon: '🏭', label: 'Поставщиктер', hint: 'Карыз, төлөм, ledger (§4)' },
   { to: '/cargo', icon: '🚚', label: 'Карго', hint: 'Логистика компаниялары, төлөм (§5.2)' },
   { to: '/transfers', icon: '🔁', label: 'Складдар аралык которуу', hint: 'TRF — өздүк нарк өзгөрбөйт (§12-А.5)' },

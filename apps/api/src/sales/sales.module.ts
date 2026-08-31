@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { AccountsModule } from '../accounts/accounts.module';
 import { AdvancesModule } from '../advances/advances.module';
 import { AuditModule } from '../audit/audit.module';
+import { BonusesModule } from '../bonuses/bonuses.module';
 import { AuthModule } from '../auth/auth.module';
 import { CreditModule } from '../credit/credit.module';
 import { CustomersModule } from '../customers/customers.module';
@@ -34,6 +35,7 @@ import { SalesService } from './sales.service';
     SettingsModule,
     AuthModule,
     AuditModule,
+    BonusesModule,
     // §17-А.2: a confirmed sale spends the customer's advances. Advances in
     // turn settle debts through SalesRepository (§35.4), so the two modules
     // genuinely need each other.

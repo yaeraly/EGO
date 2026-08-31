@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AccountsModule } from '../accounts/accounts.module';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
+import { BonusesModule } from '../bonuses/bonuses.module';
 import { CategoriesModule } from '../categories/categories.module';
 import { CreditModule } from '../credit/credit.module';
 import { DocumentsModule } from '../documents/documents.module';
@@ -19,6 +20,7 @@ import { ReturnConfirmContext, ReturnsService } from './returns.service';
     PrismaModule,
     AuditModule,
     AuthModule,
+    BonusesModule,
     DocumentsModule,
     SalesModule,
     CreditModule,

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AccountsModule } from '../accounts/accounts.module';
 import { AuditModule } from '../audit/audit.module';
+import { BonusesModule } from '../bonuses/bonuses.module';
 import { CreditModule } from '../credit/credit.module';
 import { CustomersModule } from '../customers/customers.module';
 import { DocumentsModule } from '../documents/documents.module';
@@ -18,6 +19,7 @@ import { CustomerPaymentsService } from './customer-payments.service';
     SalesModule,
     AccountsModule,
     AuditModule,
+    BonusesModule,
   ],
   controllers: [CustomerPaymentsController],
   providers: [CustomerPaymentsService],

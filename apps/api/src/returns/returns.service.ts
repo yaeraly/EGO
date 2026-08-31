@@ -18,6 +18,7 @@ import {
 } from '@prisma/client';
 import { AccountsService } from '../accounts/accounts.service';
 import { AuditService } from '../audit/audit.service';
+import { BonusesService } from '../bonuses/bonuses.service';
 import { AuthService } from '../auth/auth.service';
 import { CategoriesService } from '../categories/categories.service';
 import { Db } from '../common/db';
@@ -89,6 +90,7 @@ export class ReturnsService implements DocumentPoster, OnModuleInit {
     private readonly accounts: AccountsService,
     private readonly categories: CategoriesService,
     private readonly auth: AuthService,
+    private readonly bonuses: BonusesService,
     private readonly audit: AuditService,
     private readonly posting: DocumentPostingRegistry,
     private readonly context: ReturnConfirmContext,
@@ -352,7 +354,21 @@ export class ReturnsService implements DocumentPoster, OnModuleInit {
 
     for (const line of offset.lines) {
       await this.sales.applyAllocation(tx, line.saleId, line.amount);
+      // §23.2 — settling a debt this way makes that sale's bonus payable too.
+      await this.bonuses.reassess(tx, line.saleId);
     }
+
+    // §23.4 — the margin on returned goods is taken back with them.
+    await this.bonuses.reverseForReturn(tx, {
+      saleId: record.original_sale,
+      returnId: document.id,
+      lines: record.return_items.map((item) => ({
+        qty: item.qty,
+        unitPrice: item.original_price,
+        unitCost: item.original_unit_cost,
+      })),
+      userId,
+    });
 
     const debtOffset = record.total_return_amount.minus(offset.overpayment);
     const cash = offset.overpayment;

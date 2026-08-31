@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { AccountsService } from '../accounts/accounts.service';
 import { AuditService } from '../audit/audit.service';
+import { BonusesService } from '../bonuses/bonuses.service';
 import { Db } from '../common/db';
 import { toDecimal } from '../common/decimal';
 import { CreditRepository } from '../credit/credit.repository';
@@ -41,6 +42,7 @@ export class CustomerPaymentsService implements DocumentPoster, OnModuleInit {
     private readonly sales: SalesRepository,
     private readonly credit: CreditRepository,
     private readonly accounts: AccountsService,
+    private readonly bonuses: BonusesService,
     private readonly audit: AuditService,
     private readonly posting: DocumentPostingRegistry,
   ) {}
@@ -182,6 +184,8 @@ export class CustomerPaymentsService implements DocumentPoster, OnModuleInit {
       });
       // The only way a sale's paid and outstanding amounts ever move.
       await this.sales.applyAllocation(tx, line.saleId, line.amount);
+      // §23.2 — a bonus becomes payable when its own sale is settled.
+      await this.bonuses.reassess(tx, line.saleId);
     }
 
     for (const line of payment.customer_payment_lines) {

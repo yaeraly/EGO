@@ -18,6 +18,7 @@ import { AccountsService } from '../accounts/accounts.service';
 import { AdvancesService } from '../advances/advances.service';
 import { ReservationsService } from '../reservations/reservations.service';
 import { AuditService } from '../audit/audit.service';
+import { BonusesService } from '../bonuses/bonuses.service';
 import { AuthService } from '../auth/auth.service';
 import { roundMoney } from '../common/decimal';
 import { CreditService } from '../credit/credit.service';
@@ -91,6 +92,7 @@ export class SaleConfirmService {
     @Inject(forwardRef(() => AdvancesService))
     private readonly advances: AdvancesService,
     private readonly reservations: ReservationsService,
+    private readonly bonuses: BonusesService,
   ) {}
 
   async confirm(
@@ -282,6 +284,18 @@ export class SaleConfirmService {
         : paid.greaterThan(0)
           ? debt_status.PARTIALLY_PAID
           : debt_status.OPEN,
+    });
+
+    // §23.1 — the margin is known the moment the sale is confirmed, so the
+    // bonus is recorded now. Whether it is payable is a separate question
+    // (§23.2), answered by whether this sale is settled.
+    await this.bonuses.calculateForSale(tx, {
+      saleId: document.id,
+      salesperson: sale.salesperson,
+      revenue: facts.finalTotal,
+      fifoCogs: totalCogs,
+      outstanding,
+      isLossSale: sale.is_loss_sale,
     });
 
     // §17 — the hold has done its job; the goods have left. Marking it here

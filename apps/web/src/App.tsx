@@ -4,6 +4,7 @@ import { AppShell } from './components/AppShell';
 import { AccountsPage } from './pages/AccountsPage';
 import { CargoPage, CargoListPage } from './pages/CargoPage';
 import { CargoPaymentPage } from './pages/CargoPaymentPage';
+import { BonusesPage } from './pages/BonusesPage';
 import { CurrencyExchangePage } from './pages/CurrencyExchangePage';
 import { LoginPage } from './pages/LoginPage';
 import { CustomerListPage, CustomerPage } from './pages/CustomersPage';
@@ -96,6 +97,7 @@ function Router() {
         <Route path="/write-offs" element={<WriteOffsPage />} />
         <Route path="/expenses" element={<ExpensesPage />} />
         <Route path="/salaries" element={<SalariesPage />} />
+        <Route path="/bonuses" element={<BonusesPage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/products/:id" element={<ProductStockPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />

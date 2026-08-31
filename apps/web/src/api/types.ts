@@ -929,3 +929,39 @@ export interface SalaryPeriodRow {
   paid: string;
   payments: number;
 }
+
+export type BonusStatus =
+  | 'CALCULATED'
+  | 'PAYABLE'
+  | 'PAID'
+  | 'ADJUSTED'
+  | 'REVERSED';
+
+/** One sale's bonus (§23). */
+export interface BonusRow {
+  id: string;
+  sale_id: string;
+  employee_id: string;
+  revenue: string;
+  fifo_cogs: string;
+  bonus_base: string;
+  bonus_rate: string;
+  calculated_amount: string;
+  adjustment_amount: string;
+  payable_amount: string;
+  status: BonusStatus;
+  calculated_at: string;
+  payable_at: string | null;
+  paid_at: string | null;
+  payment_doc: string | null;
+}
+
+/** What one employee has earned and what is ready to hand over (§23.2). */
+export interface BonusStanding {
+  employee_id: string;
+  full_name: string;
+  bonus_rate_pct: string;
+  /** Earned, but the sale is still owed — not payable yet. */
+  calculated: string;
+  payable: string;
+}

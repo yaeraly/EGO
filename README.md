@@ -4,13 +4,13 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–11 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–12 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
 returns; defect acts, write-offs and scrap income; operating expenses;
-salaries.
-691 API tests and 11 client tests passing.
+salaries; the seller's bonus.
+703 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -87,6 +87,10 @@ salaries.
 | 11.2 Paying it: only the net leaves the account | done |
 | 11.3 What each employee has been paid for a period | done |
 | 11.4 UI: the month, the parts and the payment | done |
+| 12.1 Bonus from the margin a confirmed sale earned (§23.1) | done |
+| 12.2 Payable once that sale's own money arrives (§23.2) | done |
+| 12.3 Paying it (BON); a return reverses or adjusts it (§23.3–23.4) | done |
+| 12.4 UI: what each seller has earned, and the payment | done |
 
 Module 0 acceptance criteria:
 
@@ -257,6 +261,23 @@ Module 11 acceptance criteria:
 | 9 | §25: the period summary adds up confirmed payments and counts them | `test/salaries.spec.ts` |
 | 10 | A draft salary counts for nothing | `test/salaries.spec.ts` |
 
+Module 12 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §23: base = revenue − FIFO COGS, bonus = base × rate (100 000 − 70 000 at 10% → 3 000) | `test/bonuses.spec.ts` |
+| 2 | §23.1: the sale's own revenue, cost and rate are recorded at confirmation and never recomputed later | `test/bonuses.spec.ts` |
+| 3 | §13.6: a loss sale earns no bonus base at all | `test/bonuses.spec.ts` |
+| 4 | §23.2: CALCULATED while that sale is owed, PAYABLE once it is settled — another sale's debt holds nothing back | `test/bonuses.spec.ts` |
+| 5 | §23.2: a sale paid at the counter is payable straight away | `test/bonuses.spec.ts` |
+| 6 | §23.4: a return reduces an unpaid bonus, and reverses it when everything comes back | `test/bonuses.spec.ts` |
+| 7 | §23.4: a bonus already paid is kept, and the difference is carried as an adjustment | `test/bonuses.spec.ts` |
+| 8 | §23.3: BON takes the money out of the account it names and marks the bonuses paid, oldest first | `test/bonuses.spec.ts` |
+| 9 | More than is payable is refused, and so is a payment when nothing is | `test/bonuses.spec.ts` |
+| 10 | §2: the whole module is the OWNER's — reading it and paying it both | `test/bonuses.spec.ts` |
+| 11 | §3.1.5: BON is an operating flow, like the salary it accompanies | `test/bonuses.spec.ts` |
+| 12 | §23.5: a later exchange-rate move leaves a recorded bonus alone | `test/bonuses.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -265,9 +286,24 @@ Module 11 acceptance criteria:
   screen shows what has already been paid for that month, with the count, so
   a double payment is obvious before it is made. Say the word if you want it
   refused outright.
-- **The bonus is typed in until §23 lands.** `bonus_amount` is a part of the
-  salary document, and the bonus module that would calculate it is the next
-  one in §41's order. Until then the OWNER enters the figure.
+- **The salary's `bonus_amount` is still typed in, and §23 is now what tells
+  you the figure.** The two documents stay apart on purpose: BON pays the
+  bonus and is a document of its own (§23.3), so posting the same money again
+  inside SLR would pay it twice. The bonus screen shows what is payable per
+  employee; the OWNER decides whether to hand it over as BON or to carry it
+  into that month's salary.
+- **An unconfigured bonus rate is zero, not an error.** §23 states the
+  formula and leaves the rate to the OWNER. With neither a personal rate nor
+  the `BONUS_DEFAULT_RATE_PCT` setting, the rate is 0 and the bonus is 0 — a
+  sale is never blocked by an unconfigured rate, and the screen shows the 0%
+  plainly so it is visible rather than silent. Tell me the default you want
+  and it becomes a seeded setting.
+- **A paid bonus is carried as an adjustment, never reclaimed** (§23.4). When
+  goods come back after the bonus was handed over, the money stays with the
+  seller and the difference is held against what they earn next. Taking cash
+  back off a person is not something §23 asks for, and the schema keeps the
+  payment intact. If you want it deducted from the next salary instead, that
+  is a rule §25 does not have yet.
 - **An advance reduces the payout but moves no money here.** §25 lists the
   advance as a component; whatever document handed it over earlier is what
   took it out of the till, so posting the gross here would pay it twice.

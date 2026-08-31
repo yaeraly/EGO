@@ -36,6 +36,8 @@ const CATEGORIES: Partial<Record<doc_type, CashFlowCategory>> = {
   // §25 — a salary is an operating expense. §3.1.6 keeps it apart from an
   // owner's withdrawal, which is why the two never share a document type.
   [doc_type.SLR]: CashFlowCategory.OPERATING,
+  // §23 — a bonus is pay, and pay is operating.
+  [doc_type.BON]: CashFlowCategory.OPERATING,
   [doc_type.CEX]: CashFlowCategory.INTERNAL_TRANSFER,
 };
 

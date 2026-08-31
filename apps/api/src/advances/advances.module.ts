@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { AccountsModule } from '../accounts/accounts.module';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
+import { BonusesModule } from '../bonuses/bonuses.module';
 import { CreditModule } from '../credit/credit.module';
 import { CustomersModule } from '../customers/customers.module';
 import { DocumentsModule } from '../documents/documents.module';
@@ -16,6 +17,7 @@ import { AdvancesService } from './advances.service';
     PrismaModule,
     AuditModule,
     AuthModule,
+    BonusesModule,
     DocumentsModule,
     CustomersModule,
     AccountsModule,

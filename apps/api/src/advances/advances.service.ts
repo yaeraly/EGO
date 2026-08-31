@@ -10,6 +10,7 @@ import { Prisma, advance_status, doc_type, documents } from '@prisma/client';
 import { AccountsService } from '../accounts/accounts.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
+import { BonusesService } from '../bonuses/bonuses.service';
 import { Db } from '../common/db';
 import { toDecimal } from '../common/decimal';
 import { CreditRepository } from '../credit/credit.repository';
@@ -74,6 +75,7 @@ export class AdvancesService implements DocumentPoster, OnModuleInit {
     private readonly credit: CreditRepository,
     private readonly sales: SalesRepository,
     private readonly auth: AuthService,
+    private readonly bonuses: BonusesService,
     private readonly audit: AuditService,
     private readonly posting: DocumentPostingRegistry,
   ) {}
@@ -304,6 +306,8 @@ export class AdvancesService implements DocumentPoster, OnModuleInit {
 
       for (const line of offset.lines) {
         await this.sales.applyAllocation(tx, line.saleId, line.amount);
+        // §23.2 — the sale is settled, so its bonus is payable.
+        await this.bonuses.reassess(tx, line.saleId);
       }
 
       const cash = offset.overpayment;
