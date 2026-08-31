@@ -373,6 +373,16 @@ button.link {
   gap: 8px;
 }
 
+/*
+ * A checkbox and its text read as one line. `label` is a column flexbox so a
+ * field sits above its input; a checkbox is the one case where that is wrong.
+ */
+label.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
 .centered {
   min-height: 60vh;
   display: flex;

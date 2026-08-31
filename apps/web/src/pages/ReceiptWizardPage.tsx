@@ -429,7 +429,7 @@ function ExpensesStep({
             </>
           )}
 
-          <label className="inline" style={{ flexDirection: 'row' }}>
+          <label className="checkbox">
             <input
               type="checkbox"
               checked={isPaid}

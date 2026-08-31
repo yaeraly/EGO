@@ -21,6 +21,10 @@ import { ClaimListPage, ClaimPage } from './pages/ClaimPage';
 import { DiscrepanciesPage, DiscrepancyPage } from './pages/DiscrepanciesPage';
 import { ReceiptListPage } from './pages/ReceiptListPage';
 import { ReceiptWizardPage } from './pages/ReceiptWizardPage';
+import { CategoriesPage } from './pages/CategoriesPage';
+import { ProductFormPage } from './pages/ProductFormPage';
+import { ProductPage } from './pages/ProductPage';
+import { ProductsPage } from './pages/ProductsPage';
 import { ProductStockPage, StockPage } from './pages/StockPage';
 import { TransfersPage, WarehousesPage } from './pages/TransfersPage';
 
@@ -62,6 +66,11 @@ function Router() {
         <Route path="/currency-exchange" element={<CurrencyExchangePage />} />
         <Route path="/receipts" element={<ReceiptListPage />} />
         <Route path="/receipts/:id" element={<ReceiptWizardPage />} />
+        <Route path="/products" element={<ProductsPage />} />
+        <Route path="/products/new" element={<ProductFormPage />} />
+        <Route path="/products/:id" element={<ProductPage />} />
+        <Route path="/products/:id/edit" element={<ProductFormPage />} />
+        <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/products/:id" element={<ProductStockPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />

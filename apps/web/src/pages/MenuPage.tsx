@@ -22,6 +22,7 @@ const ENTRIES: Entry[] = [
   { to: '/transfers', icon: '🔁', label: 'Складдар аралык которуу', hint: 'TRF — өздүк нарк өзгөрбөйт (§12-А.5)' },
   { to: '/discrepancies', icon: '⚖️', label: 'Расхождениелер', hint: 'DIF — заказ менен фактынын айырмасы (§8)' },
   { to: '/claims', icon: '📮', label: 'Талаптар', hint: 'CLM — жоготуу үчүн талап (§8.5)', ownerOnly: true },
+  { to: '/products', icon: '🔧', label: 'Товар каталогу', hint: 'Товар карточкасы, категория, издөө (§12-Б)' },
   { to: '/warehouses', icon: '🏗️', label: 'Складдар', hint: 'MAIN, DEFECT жана башкалар (§12-А)' },
 ];
 

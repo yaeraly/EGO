@@ -11,6 +11,7 @@ import { roundMoney } from '../common/decimal';
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingKey } from '../settings/setting-keys';
 import { SettingsService } from '../settings/settings.service';
+import { StockService } from '../stock/stock.service';
 
 const ZERO = new Prisma.Decimal(0);
 const HUNDRED = new Prisma.Decimal(100);
@@ -57,6 +58,7 @@ export class PricingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settings: SettingsService,
+    private readonly stock: StockService,
   ) {}
 
   async suggest(
@@ -82,10 +84,10 @@ export class PricingService {
       throw new NotFoundException('Customer not found');
     }
 
-    const unitCost = await this.oldestUnitCost(
-      db,
+    const unitCost = await this.stock.oldestUnitCost(
       params.productId,
       params.warehouseId,
+      db,
     );
     const extra = await this.extraMarkupPct(customer);
     const base = product.base_markup_pct;
@@ -137,30 +139,6 @@ export class PricingService {
       product.min_selling_price.greaterThan(suggested)
       ? product.min_selling_price
       : suggested;
-  }
-
-  /**
-   * FIFO cost of the next unit out (§13.3).
-   *
-   * The oldest available layer is what a sale would consume first, so it is
-   * what the price should be built on.
-   */
-  private async oldestUnitCost(
-    db: Db,
-    productId: string,
-    warehouseId: string,
-  ): Promise<Prisma.Decimal | null> {
-    const [row] = await db.$queryRaw<{ unit_cost: Prisma.Decimal }[]>`
-      SELECT l.unit_cost
-      FROM layer_stock s
-      JOIN fifo_layers l ON l.id = s.layer_id
-      WHERE s.warehouse_id = ${warehouseId}::uuid
-        AND l.product_id = ${productId}::uuid
-        AND s.qty > 0
-      ORDER BY l.layer_date ASC, l.created_at ASC, l.id ASC
-      LIMIT 1
-    `;
-    return row?.unit_cost ?? null;
   }
 
   /**

@@ -1,4 +1,15 @@
-import { IsBoolean, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { DECIMAL_MESSAGE, DECIMAL_PATTERN } from '../../common/decimal';
 
 /**
@@ -98,6 +109,38 @@ export class CreateProductDto {
   @IsString()
   @MaxLength(64)
   supplier_product_code?: string;
+
+  /** §12-Б.1 — free text on the card; also searched. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
+
+  /**
+   * §12-Б.7: how long the warranty runs for this product. Left unset, the
+   * category's default applies (§36-А.1) — and 0 is a deliberate "no
+   * warranty", which is why it is not the same as leaving it out.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(3650)
+  warranty_days?: number;
+
+  /** §12-Б.8 — which tricycle models the part fits, as plain text in the MVP. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  compatibility_notes?: string;
+
+  /** §12-Б.4 — the OWNER's stock thresholds; the stock itself is never set here. */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `min_stock ${DECIMAL_MESSAGE}` })
+  min_stock?: string;
+
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `reorder_point ${DECIMAL_MESSAGE}` })
+  reorder_point?: string;
 }
 
 export class UpdateProductDto {
@@ -182,6 +225,38 @@ export class UpdateProductDto {
   @IsString()
   @MaxLength(64)
   supplier_product_code?: string;
+
+  /** §12-Б.1 — free text on the card; also searched. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  description?: string;
+
+  /**
+   * §12-Б.7: how long the warranty runs for this product. Left unset, the
+   * category's default applies (§36-А.1) — and 0 is a deliberate "no
+   * warranty", which is why it is not the same as leaving it out.
+   */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(3650)
+  warranty_days?: number;
+
+  /** §12-Б.8 — which tricycle models the part fits, as plain text in the MVP. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  compatibility_notes?: string;
+
+  /** §12-Б.4 — the OWNER's stock thresholds; the stock itself is never set here. */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `min_stock ${DECIMAL_MESSAGE}` })
+  min_stock?: string;
+
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `reorder_point ${DECIMAL_MESSAGE}` })
+  reorder_point?: string;
 
   @IsOptional()
   @IsBoolean()

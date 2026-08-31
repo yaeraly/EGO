@@ -28,7 +28,7 @@ function idempotencyKey(): string {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'PUT';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: unknown;
   /** Reuse a key so a retried submit cannot post the document twice. */
   idempotencyKey?: string;

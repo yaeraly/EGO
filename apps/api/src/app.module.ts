@@ -9,6 +9,7 @@ import { AuditModule } from './audit/audit.module';
 import { BusinessDaysModule } from './business-days/business-days.module';
 import { CapitalModule } from './capital/capital.module';
 import { CargoPaymentsModule } from './cargo-payments/cargo-payments.module';
+import { CategoriesModule } from './categories/categories.module';
 import { CounterpartiesModule } from './counterparties/counterparties.module';
 import { LedgersModule } from './ledgers/ledgers.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -72,6 +73,7 @@ enableBigIntJson();
     PurchaseViewModule,
     CargoPaymentsModule,
     NotificationsModule,
+    CategoriesModule,
     WarehousesModule,
     StockModule,
     WarehouseTransfersModule,

@@ -341,6 +341,21 @@ export class StockService {
     return row?.qty ?? ZERO;
   }
 
+  /**
+   * Unit cost of the next unit out (§13.3): the oldest layer with stock.
+   *
+   * One definition, used by the sale screen's price suggestion and by the
+   * product card alike — two definitions of "current cost" would eventually
+   * disagree, and the price checked against one would post against the other.
+   */
+  oldestUnitCost(
+    productId: string,
+    warehouseId?: string,
+    db: Db = this.prisma,
+  ): Promise<Prisma.Decimal | null> {
+    return this.repository.oldestUnitCost(db, productId, warehouseId);
+  }
+
   /** Layers with stock, oldest first — the FIFO queue Module 4 will consume. */
   availableLayers(productId: string, warehouseId: string, db: Db = this.prisma) {
     return this.repository.availableLayers(db, productId, warehouseId);

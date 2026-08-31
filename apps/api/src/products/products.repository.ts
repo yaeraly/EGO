@@ -27,6 +27,10 @@ export class ProductsRepository {
     return this.prisma.products.findMany({
       where: {
         ...(params.includeInactive ? {} : { is_active: true }),
+        // §12-Б.9.6: SKU, name, barcode, OEM code and the alternative names.
+        // The same part is called different things by the market, the mechanic
+        // and the Chinese supplier (§12-Б.2), so a search that only reads the
+        // official name finds nothing the person actually typed.
         ...(text
           ? {
               OR: [
@@ -34,6 +38,11 @@ export class ProductsRepository {
                 { name: { contains: text, mode: 'insensitive' } },
                 { barcode: { contains: text, mode: 'insensitive' } },
                 { oem_code: { contains: text, mode: 'insensitive' } },
+                {
+                  product_aliases: {
+                    some: { alias: { contains: text, mode: 'insensitive' } },
+                  },
+                },
               ],
             }
           : {}),

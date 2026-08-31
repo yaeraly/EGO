@@ -191,6 +191,101 @@ export interface Product {
   sku: string;
   name: string;
   is_active: boolean;
+  category_id: string | null;
+  brand: string | null;
+  unit: string;
+  barcode: string | null;
+  oem_code: string | null;
+  description: string | null;
+  compatibility_notes: string | null;
+  warranty_days: number | null;
+  weight_kg: string | null;
+  length_cm: string | null;
+  width_cm: string | null;
+  height_cm: string | null;
+  volume_m3: string | null;
+  chargeable_weight_kg: string | null;
+  min_stock: string;
+  reorder_point: string;
+  base_markup_pct: string | null;
+  min_selling_price: string | null;
+  main_supplier_id: string | null;
+  supplier_product_code: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Module 5 — product catalogue (§12-Б)
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface Category {
+  id: string;
+  name: string;
+  /** §36-А.1 — what a product in it inherits when it sets no term. */
+  default_warranty_days: number;
+  product_count: number;
+}
+
+export type AliasKind = 'RU' | 'KG' | 'SUPPLIER' | 'KEYWORD' | 'OEM' | 'OTHER';
+
+export interface ProductAlias {
+  id: string;
+  alias: string;
+  kind: AliasKind;
+}
+
+export interface ProductCard {
+  product: {
+    id: string;
+    sku: string;
+    name: string;
+    brand: string | null;
+    unit: string;
+    barcode: string | null;
+    oem_code: string | null;
+    description: string | null;
+    compatibility_notes: string | null;
+    is_active: boolean;
+    weight_kg: string | null;
+    length_cm: string | null;
+    width_cm: string | null;
+    height_cm: string | null;
+    volume_m3: string | null;
+    chargeable_weight_kg: string | null;
+  };
+  category: { id: string; name: string; default_warranty_days: number } | null;
+  aliases: ProductAlias[];
+  warranty: { days: number; source: 'PRODUCT' | 'CATEGORY' | 'NONE' };
+  stock: {
+    current_qty: string;
+    reserved_qty: string;
+    available_qty: string;
+    total_value_kgs: string;
+    inbound_qty: string;
+    min_stock: string;
+    reorder_point: string;
+    below_minimum: boolean;
+    needs_reorder: boolean;
+    by_warehouse: ProductStock['by_warehouse'];
+  };
+  layers: LayerView[];
+  purchasing: {
+    main_supplier: { id: string; name: string } | null;
+    supplier_product_code: string | null;
+    last_purchase: {
+      document_id: string;
+      doc_number: string;
+      business_date: string;
+      price_cny: string;
+      qty: string;
+    } | null;
+    last_receipt_date: string | null;
+  };
+  pricing: {
+    base_markup_pct: string | null;
+    min_selling_price: string | null;
+    current_fifo_cost: string | null;
+    indicative_price: string | null;
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────

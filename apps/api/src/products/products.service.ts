@@ -1,10 +1,12 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, products } from '@prisma/client';
+import { Prisma, product_aliases, products } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { Db } from '../common/db';
-import { toOptionalDecimal } from '../common/decimal';
+import { toDecimal, toOptionalDecimal } from '../common/decimal';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateAliasDto } from './dto/alias.dto';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
+import { ProductAliasesRepository } from './product-aliases.repository';
 import { ProductsRepository } from './products.repository';
 
 @Injectable()
@@ -12,6 +14,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly repository: ProductsRepository,
+    private readonly aliases: ProductAliasesRepository,
     private readonly audit: AuditService,
   ) {}
 
@@ -42,6 +45,15 @@ export class ProductsService {
         ),
         main_supplier_id: dto.main_supplier_id ?? null,
         supplier_product_code: dto.supplier_product_code ?? null,
+        description: dto.description ?? null,
+        warranty_days: dto.warranty_days ?? null,
+        compatibility_notes: dto.compatibility_notes ?? null,
+        ...(dto.min_stock === undefined
+          ? {}
+          : { min_stock: toDecimal(dto.min_stock, 'min_stock') }),
+        ...(dto.reorder_point === undefined
+          ? {}
+          : { reorder_point: toDecimal(dto.reorder_point, 'reorder_point') }),
       });
     } catch (error) {
       throw this.translateSkuConflict(error);
@@ -127,6 +139,17 @@ export class ProductsService {
       ),
       main_supplier_id: dto.main_supplier_id,
       supplier_product_code: dto.supplier_product_code,
+      description: dto.description,
+      warranty_days: dto.warranty_days,
+      compatibility_notes: dto.compatibility_notes,
+      // min_stock and reorder_point are NOT NULL with a default, so an absent
+      // field must leave the stored value alone rather than write null.
+      ...(dto.min_stock === undefined
+        ? {}
+        : { min_stock: toDecimal(dto.min_stock, 'min_stock') }),
+      ...(dto.reorder_point === undefined
+        ? {}
+        : { reorder_point: toDecimal(dto.reorder_point, 'reorder_point') }),
       is_active: dto.is_active,
       updated_at: new Date(),
     });
@@ -141,6 +164,70 @@ export class ProductsService {
     });
 
     return product;
+  }
+
+
+  /**
+   * Alternative names (§12-Б.2).
+   *
+   * One part is called different things by the market, the mechanic and the
+   * Chinese supplier; each name recorded here is one more way the person at
+   * the counter finds it (§12-Б.9.6).
+   */
+  async addAlias(
+    productId: string,
+    dto: CreateAliasDto,
+    userId: string,
+  ): Promise<product_aliases> {
+    await this.findOne(productId);
+    const alias = dto.alias.trim();
+
+    const existing = await this.aliases.findSame(productId, alias);
+    if (existing) {
+      throw new ConflictException(`«${alias}» бул товарда мурдатан бар (§12-Б.2)`);
+    }
+
+    const row = await this.aliases.insert({
+      productId,
+      alias,
+      kind: dto.kind ?? 'OTHER',
+    });
+
+    await this.audit.log({
+      userId,
+      entity: 'product_aliases',
+      entityId: row.id,
+      action: 'PRODUCT_ALIAS_ADDED',
+      newValue: { product_id: productId, alias: row.alias, kind: row.kind },
+    });
+
+    return row;
+  }
+
+  async listAliases(productId: string): Promise<product_aliases[]> {
+    await this.findOne(productId);
+    return this.aliases.findForProduct(productId);
+  }
+
+  async removeAlias(
+    productId: string,
+    aliasId: string,
+    userId: string,
+  ): Promise<void> {
+    const alias = await this.aliases.findById(aliasId);
+    if (!alias || alias.product_id !== productId) {
+      throw new NotFoundException('Альтернативдүү аталыш табылган жок');
+    }
+
+    await this.aliases.delete(aliasId);
+
+    await this.audit.log({
+      userId,
+      entity: 'product_aliases',
+      entityId: aliasId,
+      action: 'PRODUCT_ALIAS_REMOVED',
+      oldValue: { product_id: productId, alias: alias.alias, kind: alias.kind },
+    });
   }
 
   private translateSkuConflict(error: unknown): unknown {

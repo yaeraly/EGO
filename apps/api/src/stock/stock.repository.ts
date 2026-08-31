@@ -238,4 +238,42 @@ export class StockRepository {
       orderBy: { id: 'asc' },
     });
   }
+
+  /**
+   * Unit cost of the oldest layer still holding stock — the cost the next
+   * unit out would carry (§13.3, §18).
+   *
+   * `warehouseId` narrows it to one warehouse; without it the question is
+   * "what does the next unit cost anywhere it can be sold from", so only MAIN
+   * counts — DEFECT stock is not for sale (§12-А.6).
+   */
+  async oldestUnitCost(
+    db: Db,
+    productId: string,
+    warehouseId?: string,
+  ): Promise<Prisma.Decimal | null> {
+    const rows = warehouseId
+      ? await db.$queryRaw<{ unit_cost: Prisma.Decimal }[]>`
+          SELECT l.unit_cost
+          FROM layer_stock s
+          JOIN fifo_layers l ON l.id = s.layer_id
+          WHERE s.warehouse_id = ${warehouseId}::uuid
+            AND l.product_id = ${productId}::uuid
+            AND s.qty > 0
+          ORDER BY l.layer_date ASC, l.created_at ASC, l.id ASC
+          LIMIT 1
+        `
+      : await db.$queryRaw<{ unit_cost: Prisma.Decimal }[]>`
+          SELECT l.unit_cost
+          FROM layer_stock s
+          JOIN fifo_layers l ON l.id = s.layer_id
+          JOIN warehouses w ON w.id = s.warehouse_id
+          WHERE l.product_id = ${productId}::uuid
+            AND s.qty > 0
+            AND w.wtype = 'MAIN'
+          ORDER BY l.layer_date ASC, l.created_at ASC, l.id ASC
+          LIMIT 1
+        `;
+    return rows[0]?.unit_cost ?? null;
+  }
 }

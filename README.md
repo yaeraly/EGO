@@ -4,10 +4,10 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–4 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–5 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
-customers, pricing, sales, payment and debt.
-579 API tests and 11 client tests passing.
+customers, pricing, sales, payment and debt; the product catalogue.
+602 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -50,6 +50,11 @@ customers, pricing, sales, payment and debt.
 | 4.9 Credit control, overdue, OWNER override (§16.1–16.7) | done |
 | 4.10 Customer payment and allocation, overpayment → ADV (§16-А) | done |
 | 4.11 Mobile-first UI: sale screen, customer card, my sales | done |
+| 5.1 Product categories (§12-Б.1) with the warranty default (§36-А.1) | done |
+| 5.2 Product card: the rest of §12-Б.1–.8 on the product itself | done |
+| 5.3 Alternative names and search across them (§12-Б.2, §12-Б.9.6) | done |
+| 5.4 Card view: stock, inbound, FIFO layers, cost, purchase history | done |
+| 5.5 Catalogue UI: list, search, card, create/edit, categories | done |
 
 Module 0 acceptance criteria:
 
@@ -116,8 +121,38 @@ Module 3 acceptance criteria:
 | 9 | §42.5: stock never goes negative, and the transaction rolls back whole | `test/stock.spec.ts` |
 | 10 | §27.1, §18.1.6.3: a confirmed receipt refuses changes; no endpoint writes a layer cost | `test/receipts.spec.ts`, `test/stock.spec.ts` |
 
+Module 5 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §12-Б.7: a product without its own term inherits the category's; its own 0 is a real "no warranty" and does not fall through | `test/product-catalog.spec.ts` |
+| 2 | §12-Б.9.6: a search for a word that appears only in an alias finds the product | `test/product-catalog.spec.ts` |
+| 3 | §12-Б.1: SKU stays unique; a duplicate category name is refused | `test/product-catalog.spec.ts` |
+| 4 | A category with products in it will not be deleted — §36-А.2 judges returns by its term | `test/product-catalog.spec.ts` |
+| 5 | §12-Б.4/§12-А.6: DEFECT stock counts as held but never as available, and does not silence a below-minimum warning | `test/product-catalog.spec.ts` |
+| 6 | §12-Б.5: the last purchase price is read from the confirmed orders; a draft is not a price | `test/product-catalog.spec.ts` |
+| 7 | §12-Б.4: inbound is what is ordered on confirmed orders and not yet received | `test/product-catalog.spec.ts` |
+| 8 | §13.3: the card's cost is the oldest layer's — the same figure the sale screen prices from, from one code path | `test/product-catalog.spec.ts`, `test/sales.spec.ts` |
+| 9 | §2: only the OWNER writes categories, products and aliases | `test/product-catalog.spec.ts` |
+| 10 | §27: every category change reaches the audit log with old and new values | `test/product-catalog.spec.ts` |
+
 ### Open questions
 
+- **The card computes the purchase history rather than storing it** (§12-Б.5).
+  `db/egomot_schema.sql` has no column for a last purchase price, and adding
+  one would be a second copy of what the orders already say. The card reads
+  the most recent CONFIRMED order instead. Say so if you want the figure
+  frozen on the card at receipt time rather than following the documents.
+- **Categories are not seeded.** Naming them is business data, not a rule the
+  knowledge base states, so the OWNER enters them. Send a list and it becomes
+  a seed step.
+- **Product images (§12-Б.1) are not implemented.** The `images` column is
+  there, but nothing in the knowledge base says where the files live, and an
+  upload endpoint with no storage decision behind it would be a guess.
+- **A category is deletable only while empty.** §12-Б says nothing about
+  deletion; refusing it while products still inherit the category's warranty
+  term (§12-Б.7) is the reading that cannot silently change how a return is
+  judged (§36-А.2).
 - **A sale's money must land in the salesperson's own account** (§19). A
   company-wide till and another person's till are both refused. §19 describes
   per-seller accounts and per-seller day closes, so this follows; confirm it
@@ -219,6 +254,8 @@ apps/api/                 NestJS + Prisma API
     capital/                CAP, investors (§3)
     cargo-payments/         CPY and the cargo ledger (§5.2)
     common/                 guards, decorators, Decimal and hashing helpers
+    categories/             product categories and the warranty
+                            default (§12-Б.1, §36-А.1)
     counterparties/         suppliers and cargo companies
     idempotency/            duplicate-request protection (Connectivity)
     currency/               CEX, the currency FIFO service and the
@@ -231,7 +268,7 @@ apps/api/                 NestJS + Prisma API
     documents/              numbering, status machine, posting registry
     ledgers/                supplier and cargo ledgers (§4.3, §5.2)
     notifications/          in-app alerts and the daily digest (§39)
-    products/               minimal product master
+    products/               Product Master: card, aliases, search (§12-Б)
     purchase-view/          purchase list and card read model (§4.2)
     pricing/                suggested price: base markup × type/category (§13)
     purchases/              PUR and the §6 logistics stages
@@ -256,7 +293,8 @@ apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
     pages/                  login, purchases, counterparties, payments,
                             tills, CEX, alerts, receipt wizard, stock,
                             transfers, discrepancies, claims, the sale
-                            screen, checkout, customers, my sales
+                            screen, checkout, customers, my sales, the
+                            product catalogue and categories
   test/                     decimal-string helpers (the only client-side
                             code that looks at money)
 db/egomot_schema.sql      the authoritative data model

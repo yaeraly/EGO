@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { SettingsModule } from '../settings/settings.module';
+import { StockModule } from '../stock/stock.module';
 import { WarehousesModule } from '../warehouses/warehouses.module';
 import { PricingController } from './pricing.controller';
 import { PricingService } from './pricing.service';
 
 @Module({
-  imports: [PrismaModule, SettingsModule, WarehousesModule],
+  imports: [PrismaModule, SettingsModule, StockModule, WarehousesModule],
   controllers: [PricingController],
   providers: [PricingService],
   exports: [PricingService],
