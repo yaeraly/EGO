@@ -11,6 +11,8 @@ export interface AccountBalance {
   name: string;
   type: account_type;
   currency: currency_code;
+  /** Whose till it is (§19); null for a company-wide account. */
+  owner_user: string | null;
   is_active: boolean;
   /** Decimal string, exact to the stored scale. */
   balance: string;
@@ -144,6 +146,7 @@ export class AccountsService {
       name: account.name,
       type: account.type,
       currency: account.currency,
+      owner_user: account.owner_user,
       is_active: account.is_active,
       balance: (byAccount.get(account.id) ?? ZERO).toFixed(2),
     }));

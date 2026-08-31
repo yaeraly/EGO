@@ -80,6 +80,16 @@ export class CreateProductDto {
   @Matches(DECIMAL_PATTERN, { message: `chargeable_weight_kg ${DECIMAL_MESSAGE}` })
   chargeable_weight_kg?: string;
 
+  /** The product's own markup, in percent — the first level of §13. */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `base_markup_pct ${DECIMAL_MESSAGE}` })
+  base_markup_pct?: string;
+
+  /** The floor an ordinary sale may not go under (§13.2). */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `min_selling_price ${DECIMAL_MESSAGE}` })
+  min_selling_price?: string;
+
   @IsOptional()
   @IsUUID()
   main_supplier_id?: string;
@@ -153,6 +163,16 @@ export class UpdateProductDto {
   @IsOptional()
   @Matches(DECIMAL_PATTERN, { message: `chargeable_weight_kg ${DECIMAL_MESSAGE}` })
   chargeable_weight_kg?: string;
+
+  /** The product's own markup, in percent — the first level of §13. */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `base_markup_pct ${DECIMAL_MESSAGE}` })
+  base_markup_pct?: string;
+
+  /** The floor an ordinary sale may not go under (§13.2). */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `min_selling_price ${DECIMAL_MESSAGE}` })
+  min_selling_price?: string;
 
   @IsOptional()
   @IsUUID()

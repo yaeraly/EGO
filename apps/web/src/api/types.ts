@@ -34,6 +34,8 @@ export interface AccountBalance {
   name: string;
   type: string;
   currency: CurrencyCode;
+  /** Whose till it is (§19); null for a company-wide account. */
+  owner_user: string | null;
   is_active: boolean;
   balance: string;
 }
@@ -408,4 +410,161 @@ export interface WarehouseTransfer {
   to_warehouse: string;
   tstatus: TransferStatus;
   documents?: { doc_number: string; business_date: string };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Module 4 — customers, pricing, sales, payment, debt
+// ─────────────────────────────────────────────────────────────────────────
+
+export type CustomerType = 'WHOLESALE' | 'RETAIL' | 'MASTER';
+export type CustomerCategory = 'STANDARD' | 'SILVER' | 'GOLD' | 'VIP';
+
+export interface Customer {
+  id: string;
+  is_walk_in: boolean;
+  name: string;
+  phone: string | null;
+  ctype: CustomerType;
+  category: CustomerCategory;
+  category_manual_override: boolean;
+  individual_credit_limit: string | null;
+  is_active: boolean;
+}
+
+/** Everything §16.6 puts on the sale screen when a customer is chosen. */
+export interface CreditStanding {
+  customer_id: string;
+  ctype: CustomerType;
+  category: CustomerCategory;
+  is_walk_in: boolean;
+  effective_credit_limit: string | null;
+  limit_source: 'INDIVIDUAL' | 'CATEGORY' | 'UNCONFIGURED';
+  current_open_debt: string;
+  overdue_amount: string;
+  available_credit: string;
+  has_overdue: boolean;
+  oldest_unpaid_due_date: string | null;
+  open_debts: {
+    sale_id: string;
+    doc_number: string;
+    business_date: string;
+    outstanding: string;
+    due_date: string | null;
+    is_overdue: boolean;
+  }[];
+}
+
+export interface PriceSuggestion {
+  product_id: string;
+  sku: string;
+  name: string;
+  auto_price: string;
+  min_selling_price: string | null;
+  base_markup_pct: string | null;
+  extra_markup_pct: string;
+  unit_cost: string | null;
+  customer: { id: string; ctype: CustomerType; category: CustomerCategory };
+}
+
+export type SaleBlockCode =
+  | 'BELOW_COGS'
+  | 'BELOW_MIN_PRICE'
+  | 'DISCOUNT_OVER_LIMIT'
+  | 'MISSING_DISCOUNT_REASON'
+  | 'NEGATIVE_PRICE';
+
+export interface SaleBlock {
+  code: SaleBlockCode;
+  product_id?: string;
+  sku?: string;
+  message: string;
+  needs_owner_approval: boolean;
+}
+
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface SaleAssessment {
+  sale_id: string;
+  doc_number: string;
+  status: string;
+  is_loss_sale: boolean;
+  customer: { id: string; name: string; is_walk_in: boolean };
+  lines: {
+    product_id: string;
+    sku: string;
+    name: string;
+    qty: string;
+    auto_price: string;
+    final_price: string;
+    line_total: string;
+    fifo_cogs: string | null;
+  }[];
+  totals: {
+    auto_total: string;
+    total: string;
+    discount_amount: string;
+    discount_pct: string;
+    fifo_cogs: string | null;
+    margin: string | null;
+  };
+  payment: { paid: string; change: string; outstanding: string };
+  blocks: SaleBlock[];
+  approval_status: ApprovalStatus | null;
+  pin_required: boolean;
+  pin_reasons: string[];
+}
+
+export interface SaleListItem {
+  document_id: string;
+  customer_id: string;
+  salesperson: string;
+  is_loss_sale: boolean;
+  total_amount: string;
+  paid_amount: string;
+  outstanding_amount: string;
+  debt_due_date: string | null;
+  debt_status: 'OPEN' | 'PARTIALLY_PAID' | 'CLOSED' | null;
+  documents_sales_document_idTodocuments: {
+    doc_number: string;
+    business_date: string;
+    status: string;
+  };
+  customers: { id: string; name: string; is_walk_in: boolean };
+  sale_items: {
+    qty: string;
+    final_price: string;
+    products: { sku: string; name: string };
+  }[];
+}
+
+export interface CustomerPayment {
+  document_id: string;
+  customer_id: string;
+  total_amount: string;
+  overpay_advance_doc: string | null;
+  payment_allocations: {
+    id: string;
+    sale_id: string;
+    amount: string;
+    is_manual: boolean;
+  }[];
+  customers: { id: string; name: string };
+  documents_customer_payments_document_idTodocuments: {
+    doc_number: string;
+    business_date: string;
+    status: string;
+  };
+}
+
+export interface Advance {
+  document_id: string;
+  customer_id: string;
+  amount: string;
+  astatus: 'ACTIVE' | 'PARTIALLY_APPLIED' | 'APPLIED' | 'REFUNDED' | 'CANCELLED';
+  applied_amount: string;
+  refunded_amount: string;
+  documents_advances_document_idTodocuments: {
+    doc_number: string;
+    business_date: string;
+  };
 }

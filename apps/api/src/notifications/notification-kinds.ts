@@ -17,6 +17,12 @@ export const NotificationKind = {
 
   /** A currency till has fallen below its configured threshold (§39). */
   LOW_CURRENCY_BALANCE: 'LOW_CURRENCY_BALANCE',
+
+  /** A customer debt has passed its due date (§16.4, §39). */
+  CUSTOMER_DEBT_OVERDUE: 'CUSTOMER_DEBT_OVERDUE',
+
+  /** A debt falls due within the warning window (§16). */
+  CUSTOMER_DEBT_DUE_SOON: 'CUSTOMER_DEBT_DUE_SOON',
 } as const;
 
 export type NotificationKindName =

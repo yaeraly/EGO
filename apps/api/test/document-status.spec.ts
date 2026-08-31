@@ -39,9 +39,16 @@ describe('Document status machine (Module 0.3, criterion 2)', () => {
     token = body.access_token as string;
   });
 
+  /**
+   * A bare document of a type that has no posting logic yet.
+   *
+   * These tests are about the status machine itself, so the type must be one
+   * confirming does nothing else for: a SAL, say, now runs the sale poster and
+   * would rightly refuse a header with no sale behind it.
+   */
   async function newDraft(): Promise<{ id: string; doc_number: string }> {
     const { body } = await auth(http().post('/api/documents'))
-      .send({ doc_type: 'SAL', business_date: '2026-03-15' })
+      .send({ doc_type: 'COR', business_date: '2026-03-15' })
       .expect(201);
     expect(body.status).toBe(doc_status.DRAFT);
     return body;
@@ -213,7 +220,7 @@ describe('Document status machine (Module 0.3, criterion 2)', () => {
 
     it('rejects a malformed business date', async () => {
       await auth(http().post('/api/documents'))
-        .send({ doc_type: 'SAL', business_date: '15.03.2026' })
+        .send({ doc_type: 'COR', business_date: '15.03.2026' })
         .expect(400);
     });
 

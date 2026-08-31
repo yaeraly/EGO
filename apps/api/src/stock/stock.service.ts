@@ -7,6 +7,7 @@ import {
   warehouse_type,
 } from '@prisma/client';
 import { Db } from '../common/db';
+import { roundMoney } from '../common/decimal';
 import { PrismaService } from '../prisma/prisma.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
 import { StockRepository } from './stock.repository';
@@ -31,6 +32,22 @@ export interface ProductStock {
     qty: string;
     value_kgs: string;
   }[];
+}
+
+/** One layer a sale draws on, and what it costs (§18.1.4). */
+export interface FifoPlanLine {
+  layerId: string;
+  qty: Prisma.Decimal;
+  unitCost: Prisma.Decimal;
+  /** qty × unitCost, at money scale. */
+  cost: Prisma.Decimal;
+  layerDate: Date;
+}
+
+export interface FifoPlan {
+  lines: FifoPlanLine[];
+  /** Σ line costs — the FIFO COGS of §13.3. */
+  cogs: Prisma.Decimal;
 }
 
 export interface LayerView {
@@ -218,6 +235,97 @@ export class StockService {
     });
 
     return layer.unit_cost;
+  }
+
+  /**
+   * Which layers a sale of `qty` would come out of, oldest first (§18, §13.3).
+   *
+   * This is the single FIFO decision in the system. The sale screen calls it
+   * to show the COGS before anything is committed, and `consumeFifo` calls it
+   * again inside the confirming transaction to do the taking — the same
+   * function, so a price checked against one cost can never be posted against
+   * another.
+   *
+   * Refuses rather than partially filling: a sale of ten from eight in stock
+   * is not eight units of sale, it is a mistake to report (§12-А.8.8).
+   */
+  async simulateFifo(
+    db: Db,
+    params: { productId: string; warehouseId: string; qty: Prisma.Decimal },
+  ): Promise<FifoPlan> {
+    if (params.qty.lessThanOrEqualTo(0)) {
+      throw new ConflictException('A FIFO plan needs a positive quantity');
+    }
+
+    const layers = await this.repository.availableLayers(
+      db,
+      params.productId,
+      params.warehouseId,
+    );
+
+    const lines: FifoPlanLine[] = [];
+    let remaining = params.qty;
+    let cogs = ZERO;
+
+    for (const layer of layers) {
+      if (remaining.lessThanOrEqualTo(0)) {
+        break;
+      }
+      const take = Prisma.Decimal.min(remaining, layer.qty);
+      lines.push({
+        layerId: layer.layer_id,
+        qty: take,
+        unitCost: layer.unit_cost,
+        cost: roundMoney(take.times(layer.unit_cost)),
+        layerDate: layer.layer_date,
+      });
+      cogs = cogs.plus(roundMoney(take.times(layer.unit_cost)));
+      remaining = remaining.minus(take);
+    }
+
+    if (remaining.greaterThan(0)) {
+      const available = params.qty.minus(remaining);
+      throw new ConflictException(
+        `Складда ${available.toFixed(2)} гана бар, ${params.qty.toFixed(2)} сурал[д]ы — ` +
+          'жетишсиз калдыкта сатуу блоктолот (§12-А.8.8)',
+      );
+    }
+
+    return { lines, cogs };
+  }
+
+  /**
+   * Takes the goods the plan names, under a lock (§18, §42.5).
+   *
+   * The plan is recomputed here rather than passed in: between the screen's
+   * simulation and the confirm, someone else may have sold the same units.
+   * Recomputing inside the transaction, with each layer locked as it is
+   * taken, is what makes two concurrent sales of the last item resolve to
+   * one sale and one refusal.
+   */
+  async consumeFifo(
+    tx: Prisma.TransactionClient,
+    params: {
+      productId: string;
+      warehouseId: string;
+      qty: Prisma.Decimal;
+      documentId: string;
+      movementType?: stock_movement_type;
+    },
+  ): Promise<FifoPlan> {
+    const plan = await this.simulateFifo(tx, params);
+
+    for (const line of plan.lines) {
+      await this.removeFromWarehouse(tx, {
+        layerId: line.layerId,
+        warehouseId: params.warehouseId,
+        qty: line.qty,
+        documentId: params.documentId,
+        movementType: params.movementType ?? stock_movement_type.SALE_OUT,
+      });
+    }
+
+    return plan;
   }
 
   /** On-hand for one layer in one warehouse, without locking. */

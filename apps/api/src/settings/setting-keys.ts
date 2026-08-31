@@ -34,6 +34,34 @@ export const SettingKey = {
   /** Warn when a currency till falls below this, in that currency (§39). */
   LOW_BALANCE_THRESHOLD_CNY: 'alerts.low_balance_threshold.cny',
   LOW_BALANCE_THRESHOLD_USD: 'alerts.low_balance_threshold.usd',
+
+  /** Rolling window the category calculation looks back over (§12.1). */
+  CATEGORY_WINDOW_MONTHS: 'customer.category.window_months',
+
+  /**
+   * Extra markup per customer type and category (§13), in percent.
+   *
+   * The second of the two pricing levels: the product carries its own base
+   * markup, and this adds what the customer's standing is worth. §13's own
+   * example — a wholesale VIP paying no extra at all — is why this is a
+   * matrix rather than a single number.
+   */
+  PRICING_MARKUP_MATRIX: 'pricing.markup_matrix_pct',
+
+  /** Default credit limit per category, when the customer has none (§16.1). */
+  CREDIT_LIMIT_DEFAULTS: 'credit.category_default_limit_kgs',
+
+  /**
+   * Whether a salesperson sees the COGS figure on the sale screen.
+   *
+   * §13.4 blocks a below-cost sale for everyone; what it does not require is
+   * showing the cost itself to whoever is at the counter. Off by default —
+   * the block's message says what is wrong without disclosing margins.
+   */
+  SHOW_COGS_TO_STAFF: 'sale.show_cogs_to_staff',
+
+  /** Days before a debt falls due to warn the salesperson and OWNER (§16). */
+  DEBT_DUE_WARNING_DAYS: 'debt.due_warning_days',
 } as const;
 
 export type SettingKeyName = (typeof SettingKey)[keyof typeof SettingKey];
@@ -99,5 +127,35 @@ export const SEEDED_SETTINGS: SeededSetting[] = [
     value: null,
     description:
       'Warn when the USD till falls below this, in USD (§39). UNCONFIGURED — no warning is raised.',
+  },
+  {
+    key: SettingKey.CATEGORY_WINDOW_MONTHS,
+    value: 12,
+    description:
+      'Rolling months of turnover the category calculation reads (§12.1: "rolling акыркы 12 ай", OWNER-adjustable).',
+  },
+  {
+    key: SettingKey.PRICING_MARKUP_MATRIX,
+    value: null,
+    description:
+      'Extra markup percent per {type}.{category}, e.g. {"WHOLESALE":{"VIP":0}} (§13). UNCONFIGURED — the OWNER sets the percentages; until then only the product base markup applies.',
+  },
+  {
+    key: SettingKey.CREDIT_LIMIT_DEFAULTS,
+    value: null,
+    description:
+      'Default credit limit in KGS per category, e.g. {"STANDARD":0} (§16.1). UNCONFIGURED — a customer with no individual limit gets no credit.',
+  },
+  {
+    key: SettingKey.SHOW_COGS_TO_STAFF,
+    value: false,
+    description:
+      'Whether a salesperson sees the FIFO COGS on the sale screen (§13.4 blocks below-cost sales either way).',
+  },
+  {
+    key: SettingKey.DEBT_DUE_WARNING_DAYS,
+    value: 3,
+    description:
+      'Days before a debt falls due to warn the salesperson and the OWNER (§16: "мөөнөтүнө 3 күн калганда").',
   },
 ];

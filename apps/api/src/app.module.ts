@@ -12,6 +12,11 @@ import { CounterpartiesModule } from './counterparties/counterparties.module';
 import { LedgersModule } from './ledgers/ledgers.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ClaimsModule } from './claims/claims.module';
+import { CreditModule } from './credit/credit.module';
+import { CustomerPaymentsModule } from './customer-payments/customer-payments.module';
+import { CustomersModule } from './customers/customers.module';
+import { PricingModule } from './pricing/pricing.module';
+import { SalesModule } from './sales/sales.module';
 import { DiscrepanciesModule } from './discrepancies/discrepancies.module';
 import { ReceiptsModule } from './receipts/receipts.module';
 import { StockModule } from './stock/stock.module';
@@ -70,6 +75,11 @@ enableBigIntJson();
     ReceiptsModule,
     DiscrepanciesModule,
     ClaimsModule,
+    CustomersModule,
+    CreditModule,
+    PricingModule,
+    SalesModule,
+    CustomerPaymentsModule,
     SettingsModule,
   ],
   controllers: [HealthController],

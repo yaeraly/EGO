@@ -4,6 +4,7 @@ import {
   account_type,
   currency_code,
   user_role,
+  customer_type,
   user_status,
   warehouse_type,
 } from '@prisma/client';
@@ -185,6 +186,34 @@ async function seedWarehouses(): Promise<void> {
   );
 }
 
+/**
+ * The single Walk-in customer (§11.1).
+ *
+ * Unidentified retail sales are booked against it, so the system cannot take
+ * money over the counter without one. `uq_single_walkin` makes a second one
+ * impossible; this creates the first.
+ */
+async function seedWalkInCustomer(): Promise<void> {
+  const existing = await prisma.customers.findFirst({
+    where: { is_walk_in: true },
+    select: { id: true },
+  });
+  if (existing) {
+    console.log('Walk-in customer already present; nothing to create.');
+    return;
+  }
+
+  const customer = await prisma.customers.create({
+    data: {
+      is_walk_in: true,
+      name: 'Walk-in (катталбаган кардар)',
+      ctype: customer_type.RETAIL,
+    },
+    select: { id: true },
+  });
+  console.log(`Walk-in customer created: ${customer.id}`);
+}
+
 async function seedSettings(): Promise<void> {
   let created = 0;
 
@@ -226,6 +255,7 @@ async function main(): Promise<void> {
   await seedBootstrapOwner();
   await seedPaymentAccounts();
   await seedWarehouses();
+  await seedWalkInCustomer();
   await seedSettings();
 }
 

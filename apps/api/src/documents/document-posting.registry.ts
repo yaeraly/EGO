@@ -7,13 +7,13 @@ export class DocumentPostingRegistry {
   private readonly posters = new Map<doc_type, DocumentPoster>();
 
   register(poster: DocumentPoster): void {
-    const existing = this.posters.get(poster.docType);
-    if (existing && existing !== poster) {
-      throw new Error(
-        `Two posters registered for document type ${poster.docType}`,
-      );
+    for (const docType of [poster.docType, ...(poster.alsoPosts ?? [])]) {
+      const existing = this.posters.get(docType);
+      if (existing && existing !== poster) {
+        throw new Error(`Two posters registered for document type ${docType}`);
+      }
+      this.posters.set(docType, poster);
     }
-    this.posters.set(poster.docType, poster);
   }
 
   /**

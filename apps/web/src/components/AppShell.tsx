@@ -31,13 +31,13 @@ export function AppShell() {
       <Outlet />
 
       <nav className="bottom-nav">
-        <NavLink to="/purchases">
-          <span className="icon">📦</span>
-          Сатып алуу
+        <NavLink to="/sell">
+          <span className="icon">🛒</span>
+          Сатуу
         </NavLink>
-        <NavLink to="/receipts">
-          <span className="icon">📥</span>
-          Приход
+        <NavLink to="/customers">
+          <span className="icon">👤</span>
+          Кардар
         </NavLink>
         <NavLink to="/stock">
           <span className="icon">🏬</span>

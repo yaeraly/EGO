@@ -12,6 +12,10 @@ interface Entry {
 
 /** Everything the bottom bar has no room for. */
 const ENTRIES: Entry[] = [
+  { to: '/sales', icon: '🧾', label: 'Менин сатууларым', hint: 'Өз сатууларым жана кассаларым (§2, §19)' },
+  { to: '/approvals', icon: '✅', label: 'Скидка бекитүүлөрү', hint: 'Лимиттен ашкан скидка (§13.5)', ownerOnly: true },
+  { to: '/purchases', icon: '📦', label: 'Сатып алуулар', hint: 'Кытайдан заказ, логистика (§4, §6)' },
+  { to: '/receipts', icon: '📥', label: 'Приходдор', hint: 'Кабыл алуу, өздүк нарк (§7, §9)' },
   { to: '/accounts', icon: '💰', label: 'Кассалар', hint: 'Баланстар, валюта сатып алуу (CEX)' },
   { to: '/suppliers', icon: '🏭', label: 'Поставщиктер', hint: 'Карыз, төлөм, ledger (§4)' },
   { to: '/cargo', icon: '🚚', label: 'Карго', hint: 'Логистика компаниялары, төлөм (§5.2)' },

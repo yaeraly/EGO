@@ -55,6 +55,7 @@ CREATE TYPE stock_movement_type AS ENUM
 CREATE TYPE transfer_status AS ENUM ('DRAFT', 'SENT', 'RECEIVED', 'CANCELLED'); -- §12-А.4
 
 CREATE TYPE sale_status AS ENUM ('DRAFT', 'CONFIRMED', 'CANCELLED');            -- §14, §27.1
+CREATE TYPE approval_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');        -- §13.5
 CREATE TYPE debt_status AS ENUM ('OPEN', 'PARTIALLY_PAID', 'CLOSED');           -- §16
 CREATE TYPE reservation_status AS ENUM ('ACTIVE', 'FULFILLED', 'CANCELLED', 'EXPIRED'); -- §17
 CREATE TYPE advance_status AS ENUM
@@ -672,7 +673,12 @@ CREATE TABLE sales (                          -- SAL / LSS (is_loss_sale)
   from_reservation UUID REFERENCES documents(id),     -- RSV байланышы
   fiscal_receipt_no TEXT,                             -- §45 келечек үчүн орун
   owner_approval_user UUID REFERENCES users(id),      -- §13.5
-  owner_approval_reason TEXT
+  owner_approval_reason TEXT,
+  -- §13.5: скидка кызматкердин лимитинен ашса, сатуу OWNER бекиткенге чейин
+  -- тастыкталбайт. NULL = approval талап кылынган жок.
+  approval_status approval_status,
+  approval_requested_at TIMESTAMPTZ,
+  approval_decided_at   TIMESTAMPTZ
 );
 CREATE INDEX idx_sales_customer ON sales(customer_id);
 CREATE INDEX idx_sales_due ON sales(debt_due_date) WHERE debt_status IN ('OPEN','PARTIALLY_PAID');
@@ -701,6 +707,27 @@ CREATE TABLE sale_layer_allocations (
 );
 
 -- Кардар төлөмү (PAY) — §16-А
+-- Сатуунун өз төлөм саптары — §15 (mixed payment), §15.2 (сдача)
+--
+-- customer_payment_lines кийинки PAY документине тиешелүү; сатуу учурунда
+-- алынган акча ушул жерде. Сдача Cash эсебинен гана берилет, ошондуктан
+-- change_given нөлдөн чоң болсо эсеп Cash болушу керек — аны service
+-- текшерет (эсептин тиби бул таблицада көрүнбөйт).
+CREATE TABLE sale_payment_lines (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sale_id     UUID NOT NULL REFERENCES sales(document_id),
+  account_id  UUID NOT NULL REFERENCES payment_accounts(id),
+  -- Сатуунун эсебине жазылган таза сумма (сдача кемитилген).
+  amount      NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+  cash_given  NUMERIC(14,2),                 -- кардар берген накталай (§15.1)
+  change_given NUMERIC(14,2),                -- кайтарылган сдача (§15.2)
+  CONSTRAINT sale_payment_lines_change_check
+    CHECK (change_given IS NULL OR (cash_given IS NOT NULL AND change_given >= 0)),
+  CONSTRAINT sale_payment_lines_cash_check
+    CHECK (cash_given IS NULL OR cash_given >= amount)
+);
+CREATE INDEX idx_sale_payment_lines_sale ON sale_payment_lines(sale_id);
+
 CREATE TABLE customer_payments (
   document_id UUID PRIMARY KEY REFERENCES documents(id),
   customer_id UUID NOT NULL REFERENCES customers(id),

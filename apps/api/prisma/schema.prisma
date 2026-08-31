@@ -643,6 +643,7 @@ model payment_accounts {
   users                                                                users?                   @relation(fields: [owner_user], references: [id], onDelete: NoAction, onUpdate: NoAction)
   refund_lines                                                         refund_lines[]
   salary_payments                                                      salary_payments[]
+  sale_payment_lines                                                   sale_payment_lines[]
   supplier_payments                                                    supplier_payments[]
   withdrawal_docs                                                      withdrawal_docs[]
 }
@@ -924,6 +925,9 @@ model sales {
   fiscal_receipt_no                           String?
   owner_approval_user                         String?                @db.Uuid
   owner_approval_reason                       String?
+  approval_status                             approval_status?
+  approval_requested_at                       DateTime?              @db.Timestamptz(6)
+  approval_decided_at                         DateTime?              @db.Timestamptz(6)
   advance_refund_lines                        advance_refund_lines[]
   bonuses                                     bonuses?
   credit_overrides                            credit_overrides[]
@@ -931,6 +935,7 @@ model sales {
   reservations                                reservations[]
   returns                                     returns[]
   sale_items                                  sale_items[]
+  sale_payment_lines                          sale_payment_lines[]
   customers                                   customers              @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   documents_sales_document_idTodocuments      documents              @relation("sales_document_idTodocuments", fields: [document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   documents_sales_from_reservationTodocuments documents?             @relation("sales_from_reservationTodocuments", fields: [from_reservation], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -1207,6 +1212,20 @@ model receipt_items {
   @@index([receipt_id, position], map: "idx_receipt_items_receipt")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sale_payment_lines {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sale_id          String           @db.Uuid
+  account_id       String           @db.Uuid
+  amount           Decimal          @db.Decimal(14, 2)
+  cash_given       Decimal?         @db.Decimal(14, 2)
+  change_given     Decimal?         @db.Decimal(14, 2)
+  payment_accounts payment_accounts @relation(fields: [account_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales            sales            @relation(fields: [sale_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([sale_id], map: "idx_sale_payment_lines_sale")
+}
+
 enum account_type {
   CASH
   BANK
@@ -1453,4 +1472,10 @@ enum withdrawal_type {
   OWNER_WITHDRAWAL
   INVESTOR_CAPITAL_RETURN
   PROFIT_DISTRIBUTION
+}
+
+enum approval_status {
+  PENDING
+  APPROVED
+  REJECTED
 }

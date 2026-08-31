@@ -4,9 +4,10 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–3 complete.** Foundation; capital and currency; purchasing and
-counterparty payments; receipt, landed cost, LOT/FIFO and warehouses.
-476 API tests and 11 client tests passing.
+**Modules 0–4 complete.** Foundation; capital and currency; purchasing and
+counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
+customers, pricing, sales, payment and debt.
+579 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -38,6 +39,17 @@ counterparty payments; receipt, landed cost, LOT/FIFO and warehouses.
 | 3.8 Discrepancy (DIF) and its §8.2–8.3 consequence | done |
 | 3.9 Claim (CLM), compensation, write-off | done |
 | 3.10 Mobile-first UI: receipt wizard, stock, DIF, CLM | done |
+| 4.1 Customers, Walk-in, search (§11) | done |
+| 4.2 Monthly category recalculation (§12.1) | done |
+| 4.3 Pricing engine: base markup × type/category (§13) | done |
+| 4.4 Sale flow: customer, goods, payment, confirm (§14) | done |
+| 4.5 FIFO simulator and COGS — one code path (§13.3, §18.1.4) | done |
+| 4.6 Discount rules and the absolute below-cost block (§13.1–13.6) | done |
+| 4.7 Confirm and the conditional PIN (Security) | done |
+| 4.8 Mixed payment and change (§15) | done |
+| 4.9 Credit control, overdue, OWNER override (§16.1–16.7) | done |
+| 4.10 Customer payment and allocation, overpayment → ADV (§16-А) | done |
+| 4.11 Mobile-first UI: sale screen, customer card, my sales | done |
 
 Module 0 acceptance criteria:
 
@@ -73,6 +85,22 @@ Module 2 acceptance criteria:
 Module 2 also added the payment-status read model (`test/purchase-view.spec.ts`)
 and the §39 alerts (`test/notifications.spec.ts`).
 
+Module 4 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §13.3: 5×7 000 + 5×7 500, sell 10 → COGS 72 500, two allocation rows, right remainders | `test/fifo-simulation.spec.ts`, `test/sales.spec.ts` |
+| 2 | §13.4: below cost is 422 for the salesperson **and** the OWNER; only LSS goes through, with the loss computed | `test/sales.spec.ts` |
+| 3 | §16.2/§16.3: limit 100 000, debt 70 000, goods 50 000 → blocked with "pay 20 000 now"; paying it lets the sale through | `test/credit-and-payments.spec.ts` |
+| 4 | §16.4: overdue blocks new credit but not a paid sale; the OWNER override is recorded in full | `test/credit-and-payments.spec.ts` |
+| 5 | §16-А.1: debts 30 000 + 20 000, payment 40 000 → 30 000 + 10 000, second sale left owing 10 000 | `test/credit-and-payments.spec.ts` |
+| 6 | §16-А.5: debt 18 000, payment 20 000 → a 2 000 ACTIVE advance; Walk-in refused | `test/credit-and-payments.spec.ts` |
+| 7 | §15.2: total 8 000, cash given 10 000 → change 2 000 and 8 000 into the till | `test/sales.spec.ts` |
+| 8 | Two concurrent sales of the last unit → one confirms, no oversell, no negative stock | `test/sales.spec.ts`, `test/fifo-simulation.spec.ts` |
+| 9 | §11.1: Walk-in refuses any debt; only Outstanding = 0 confirms | `test/sales.spec.ts` |
+| 10 | Conditional PIN: none on an ordinary paid sale; required for a discount, a debt or the threshold; the attempt reaches the Security Log | `test/sales.spec.ts` |
+| 11 | §12.1: turnover over the threshold promotes; a manual override is left alone | `test/customers.spec.ts` |
+
 Module 3 acceptance criteria:
 
 | # | Criterion | Covered by |
@@ -90,6 +118,17 @@ Module 3 acceptance criteria:
 
 ### Open questions
 
+- **A sale's money must land in the salesperson's own account** (§19). A
+  company-wide till and another person's till are both refused. §19 describes
+  per-seller accounts and per-seller day closes, so this follows; confirm it
+  before a shop that shares one till starts using the system.
+- **The OWNER's own discount needs no second signature.** §13.5 makes the
+  OWNER the approver, so a sale the OWNER prices is treated as approved by
+  the person who would approve it. §13.4's below-cost block still refuses
+  everyone, OWNER included.
+- **A part-paid order's shortage splits by the paid share** — unchanged from
+  Module 3, restated here because Module 4's credit checks read the same
+  debts.
 - **A receipt values goods at one blended CNY rate.** §10.1 sets the rate per
   *portion* — paid yuan at what they actually cost, unpaid yuan at the
   reference rate — while the LOT records a single rate and source (§18.1.1).
@@ -104,6 +143,15 @@ Module 3 acceptance criteria:
   order. The paid proportion of that purchase is used, so a half-paid order
   splits a shortage in half. Payments made to the supplier's general debt
   rather than to this order do not count towards it. Worth confirming.
+- **A customer's category has no configured GOLD or VIP threshold.** §12
+  marks both "кийин такталат", so the monthly job promotes only as far as
+  SILVER; a customer who should be GOLD has to be set by hand (§12.1), which
+  the system supports and audits.
+- **`pricing.markup_matrix_pct` and `credit.category_default_limit_kgs` are
+  seeded null.** With no matrix a sale prices at the product's base markup
+  alone; with no default limit a customer without an individual limit gets no
+  credit at all, rather than unlimited credit. Both need the OWNER's numbers
+  before real trading.
 - **Excess is received but not valued** (§8.8): the DIF stays OPEN and the
   extra units do not enter stock, because §8.8 gives no cost rule and says the
   goods enter "per a documented decision". The decision workflow is not built.
@@ -159,6 +207,7 @@ apps/api/                 NestJS + Prisma API
     migrations/2_idempotency_keys/
     migrations/3_purchases_and_notifications/
     migrations/4_receipt_items_and_claims/
+    migrations/5_sale_payments_and_approval/
                             each carries a down.sql alongside migration.sql
     seed.ts                 bootstrap OWNER, accounts, setting keys
   src/
@@ -175,17 +224,22 @@ apps/api/                 NestJS + Prisma API
     currency/               CEX, the currency FIFO service and the
                             reference rate (§10-А, §10.1)
     claims/                 CLM, compensation, write-off (§8.5, §8.7)
+    credit/                 credit limits, overdue, override (§16.1-16.7)
+    customer-payments/      PAY and payment allocation (§16-А)
+    customers/              customers, Walk-in, categories (§11, §12)
     discrepancies/          DIF and its §8.2-8.3 consequence
     documents/              numbering, status machine, posting registry
     ledgers/                supplier and cargo ledgers (§4.3, §5.2)
     notifications/          in-app alerts and the daily digest (§39)
     products/               minimal product master
     purchase-view/          purchase list and card read model (§4.2)
+    pricing/                suggested price: base markup × type/category (§13)
     purchases/              PUR and the §6 logistics stages
     receipts/               RCV, landed cost, LOT and FIFO layers (§7, §9, §18.1)
     reports/                Cash Flow classification (§3.1.5)
     security/               Security Log
     settings/               global parameters
+    sales/                  SAL and LSS: discount rules, FIFO COGS, payment
     stock/                  the only door into layer_stock (§12-А, §42.4-5)
     supplier-payments/      SPY, FIFO consumption, FX result (§4.3, §10.2)
     transfers/              TRN
@@ -201,7 +255,8 @@ apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
     hooks/                  GET helper, unread-alert poll
     pages/                  login, purchases, counterparties, payments,
                             tills, CEX, alerts, receipt wizard, stock,
-                            transfers, discrepancies, claims
+                            transfers, discrepancies, claims, the sale
+                            screen, checkout, customers, my sales
   test/                     decimal-string helpers (the only client-side
                             code that looks at money)
 db/egomot_schema.sql      the authoritative data model

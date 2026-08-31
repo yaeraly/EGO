@@ -35,6 +35,11 @@ export class ProductsService {
           dto.chargeable_weight_kg,
           'chargeable_weight_kg',
         ),
+        base_markup_pct: toOptionalDecimal(dto.base_markup_pct, 'base_markup_pct'),
+        min_selling_price: toOptionalDecimal(
+          dto.min_selling_price,
+          'min_selling_price',
+        ),
         main_supplier_id: dto.main_supplier_id ?? null,
         supplier_product_code: dto.supplier_product_code ?? null,
       });
@@ -114,6 +119,11 @@ export class ProductsService {
       chargeable_weight_kg: toOptionalDecimal(
         dto.chargeable_weight_kg,
         'chargeable_weight_kg',
+      ),
+      base_markup_pct: toOptionalDecimal(dto.base_markup_pct, 'base_markup_pct'),
+      min_selling_price: toOptionalDecimal(
+        dto.min_selling_price,
+        'min_selling_price',
       ),
       main_supplier_id: dto.main_supplier_id,
       supplier_product_code: dto.supplier_product_code,

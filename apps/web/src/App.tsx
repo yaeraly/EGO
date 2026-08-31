@@ -6,7 +6,12 @@ import { CargoPage, CargoListPage } from './pages/CargoPage';
 import { CargoPaymentPage } from './pages/CargoPaymentPage';
 import { CurrencyExchangePage } from './pages/CurrencyExchangePage';
 import { LoginPage } from './pages/LoginPage';
+import { CustomerListPage, CustomerPage } from './pages/CustomersPage';
+import { CustomerPaymentPage } from './pages/CustomerPaymentPage';
 import { MenuPage } from './pages/MenuPage';
+import { ApprovalsPage, MySalesPage } from './pages/MySalesPage';
+import { SaleCheckoutPage } from './pages/SaleCheckoutPage';
+import { SellPage } from './pages/SellPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { PurchaseCardPage } from './pages/PurchaseCardPage';
 import { PurchaseListPage } from './pages/PurchaseListPage';
@@ -37,7 +42,14 @@ function Router() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route path="/" element={<Navigate to="/purchases" replace />} />
+        <Route path="/" element={<Navigate to="/sell" replace />} />
+        <Route path="/sell" element={<SellPage />} />
+        <Route path="/sell/:id" element={<SaleCheckoutPage />} />
+        <Route path="/sales" element={<MySalesPage />} />
+        <Route path="/approvals" element={<ApprovalsPage />} />
+        <Route path="/customers" element={<CustomerListPage />} />
+        <Route path="/customers/:id" element={<CustomerPage />} />
+        <Route path="/customer-payments/new" element={<CustomerPaymentPage />} />
         <Route path="/purchases" element={<PurchaseListPage />} />
         <Route path="/purchases/:id" element={<PurchaseCardPage />} />
         <Route path="/suppliers" element={<SupplierListPage />} />
@@ -60,7 +72,7 @@ function Router() {
         <Route path="/claims/:id" element={<ClaimPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/menu" element={<MenuPage />} />
-        <Route path="*" element={<Navigate to="/purchases" replace />} />
+        <Route path="*" element={<Navigate to="/sell" replace />} />
       </Route>
     </Routes>
   );
