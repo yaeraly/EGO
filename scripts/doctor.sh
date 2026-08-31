@@ -59,10 +59,29 @@ fi
 # 3. Dependencies and the generated client.
 if [ ! -d node_modules ]; then
   bad "node_modules жок:  npm install"
-elif [ ! -f node_modules/.prisma/client/index.d.ts ]; then
-  bad "Prisma client генерацияланган эмес:  npm run db:generate"
 else
-  ok "Көз карандылыктар жана Prisma client ордунда."
+  # Resolved exactly as the API resolves it, from apps/api. The stub that ships
+  # with @prisma/client has the same file names as a generated one, so the test
+  # is whether a model type is actually there — not whether the files exist.
+  # An ungenerated client throws "did not initialize yet" on require; a partly
+  # generated one loads but has no model types. Both mean: run db:generate.
+  CLIENT="$(cd apps/api && node -e '
+    try {
+      const c = require("@prisma/client");
+      console.log(c.user_role && c.Prisma && c.Prisma.Decimal ? "ok" : "stub");
+    } catch (e) {
+      console.log(/did not initialize/.test(String(e && e.message)) ? "stub" : "missing");
+    }
+  ' 2>/dev/null)"
+  case "$CLIENT" in
+    ok)
+      ok "Көз карандылыктар жана Prisma client ордунда." ;;
+    stub)
+      bad "Prisma client генерацияланган эмес (бош калып):  npm run db:generate"
+      say "Андан кийин dev серверди кайра иштетиңиз — tsc эски абалды кармап турат." ;;
+    *)
+      bad "@prisma/client табылган жок:  npm install && npm run db:generate" ;;
+  esac
 fi
 
 # 4. The database itself, using the same URL the application will use.

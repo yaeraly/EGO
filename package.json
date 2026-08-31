@@ -11,7 +11,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev:api": "npm run dev --workspace @egomot/api",
+    "dev:api": "npm run db:generate --silent && npm run dev --workspace @egomot/api",
     "dev:web": "npm run dev --workspace @egomot/web",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces --if-present",

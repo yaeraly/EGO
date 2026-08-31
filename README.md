@@ -329,6 +329,7 @@ they use `MIGRATION_DATABASE_URL` — the owner role — for migrations, and lea
 | | |
 |---|---|
 | `npm run doctor` | what is wrong with this working copy |
+| `npm run dev:api` | regenerates the client, then starts the API in watch mode |
 | `npm run setup` | migrate, generate, seed, build |
 | `npm run db:deploy` | apply migrations |
 | `npm run db:generate` | regenerate the Prisma client |
