@@ -651,15 +651,61 @@ export interface CustomerPayment {
   };
 }
 
+export type AdvanceStatus =
+  | 'ACTIVE'
+  | 'PARTIALLY_APPLIED'
+  | 'APPLIED'
+  | 'REFUNDED'
+  | 'CANCELLED';
+
 export interface Advance {
   document_id: string;
   customer_id: string;
+  /** The reservation this backs, when it backs one (§17.3). */
+  reservation_id: string | null;
+  account_id: string;
   amount: string;
-  astatus: 'ACTIVE' | 'PARTIALLY_APPLIED' | 'APPLIED' | 'REFUNDED' | 'CANCELLED';
+  astatus: AdvanceStatus;
   applied_amount: string;
   refunded_amount: string;
   documents_advances_document_idTodocuments: {
     doc_number: string;
     business_date: string;
   };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Module 6 — reservation (RSV) and advance (ADV), §17 and §17-А
+// ─────────────────────────────────────────────────────────────────────────
+
+export type ReservationStatus = 'ACTIVE' | 'FULFILLED' | 'CANCELLED' | 'EXPIRED';
+
+export interface Reservation {
+  document: {
+    id: string;
+    doc_number: string;
+    status: string;
+    business_date: string;
+    comment: string | null;
+  };
+  customer: { id: string; name: string };
+  salesperson: string;
+  status: ReservationStatus;
+  /** True only while the hold actually stands (§17.3). */
+  is_live: boolean;
+  expires_at: string;
+  total_amount: string;
+  advance_required: string;
+  advance_paid: string;
+  advance_outstanding: string;
+  cancel_reason: string | null;
+  fulfilled_sale: string | null;
+  items: {
+    product_id: string;
+    sku: string;
+    name: string;
+    qty: string;
+    fixed_price: string;
+    line_total: string;
+  }[];
 }

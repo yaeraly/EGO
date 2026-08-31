@@ -33,6 +33,8 @@ import { HealthController } from './health/health.controller';
 import { IdempotencyModule } from './idempotency/idempotency.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
+import { AdvancesModule } from './advances/advances.module';
+import { ReservationsModule } from './reservations/reservations.module';
 import { PurchaseViewModule } from './purchase-view/purchase-view.module';
 import { PurchasesModule } from './purchases/purchases.module';
 import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.module';
@@ -68,6 +70,8 @@ enableBigIntJson();
     LedgersModule,
     CounterpartiesModule,
     ProductsModule,
+    ReservationsModule,
+    AdvancesModule,
     PurchasesModule,
     SupplierPaymentsModule,
     PurchaseViewModule,

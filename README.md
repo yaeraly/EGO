@@ -4,10 +4,11 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–5 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–6 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
-customers, pricing, sales, payment and debt; the product catalogue.
-602 API tests and 11 client tests passing.
+customers, pricing, sales, payment and debt; the product catalogue;
+reservations and customer advances.
+628 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -55,6 +56,12 @@ customers, pricing, sales, payment and debt; the product catalogue.
 | 5.3 Alternative names and search across them (§12-Б.2, §12-Б.9.6) | done |
 | 5.4 Card view: stock, inbound, FIFO layers, cost, purchase history | done |
 | 5.5 Catalogue UI: list, search, card, create/edit, categories | done |
+| 6.1 Reservation policy settings (§17.3) | done |
+| 6.2 Reservation (RSV): fixed price, expiry, advance requirement | done |
+| 6.3 Reserved stock, and the sale that may not touch it (§42.2) | done |
+| 6.4 Expiry, cancellation, fulfilment by sale | done |
+| 6.5 Advance (ADV): taken, applied to a sale, refunded (§17-А) | done |
+| 6.6 Reservation UI: list, create, card with advance and cancel | done |
 
 Module 0 acceptance criteria:
 
@@ -136,8 +143,39 @@ Module 5 acceptance criteria:
 | 9 | §2: only the OWNER writes categories, products and aliases | `test/product-catalog.spec.ts` |
 | 10 | §27: every category change reaches the audit log with old and new values | `test/product-catalog.spec.ts` |
 
+Module 6 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §42.2: a confirmed reservation comes off available stock, and another customer's sale of it is refused | `test/reservations.spec.ts` |
+| 2 | §17.3: the hold ends the moment it expires — stock is free before the job runs, which then only records EXPIRED | `test/reservations.spec.ts` |
+| 3 | §17.3's own example: 20 000 threshold at 20% on a 50 000 reservation → 10 000 required | `test/reservations.spec.ts` |
+| 4 | A required advance with no configured percentage is refused, not priced at a guess | `test/reservations.spec.ts` |
+| 5 | §17.3: a product that always demands an advance wins over the amount threshold, with its own percentage | `test/reservations.spec.ts` |
+| 6 | §17.3: Walk-in cannot reserve or hold an advance; the active-reservation limit holds, and the OWNER passes it only with a reason that reaches the audit log | `test/reservations.spec.ts` |
+| 7 | §17.1: the sale charges the price fixed at reservation time, and §13.4 still refuses it if cost has risen above it | `test/reservations.spec.ts` |
+| 8 | Two reservations for the last unit: one confirms, one is refused | `test/reservations.spec.ts` |
+| 9 | §17-А.1–.3: an advance is cash in and a liability, and it settles the sale before credit is weighed | `test/reservations.spec.ts` |
+| 10 | §17-А.4, §35.4: a refund pays the open debt first and only then hands back cash; §35.5 needs a reason for another account; a PIN is always required | `test/reservations.spec.ts` |
+
 ### Open questions
 
+- **An unset reservation policy means "no limit", not a guessed one** (§17.3).
+  §17.3 names five parameters and states no numbers — its 20 000 / 20% is
+  introduced as an example. So an unset threshold imposes no requirement, an
+  unset active-reservation limit imposes none, and an unset percentage refuses
+  a reservation that needs an advance rather than inventing a rate. The one
+  that deserves the OWNER's attention is
+  `reservation.max_no_advance_hours`: §17.3 requires a zero-advance
+  reservation to be time-boxed, and while that setting is empty nothing caps
+  it.
+- **A cancelled reservation refunds the advance in full** (§17.2). The
+  cancellation fee is stored as a setting and left unset, which §17.2
+  describes as the MVP state: "баштапкы версияда бул параметр өчүк турат,
+  бирок архитектура даяр болот".
+- **The advance refund posts against the ADV document.** `advance_refund_lines`
+  carries no document of its own, so the outgoing movement belongs to the
+  advance it reverses — every movement still has a document (§42.3).
 - **The card computes the purchase history rather than storing it** (§12-Б.5).
   `db/egomot_schema.sql` has no column for a last purchase price, and adding
   one would be a second copy of what the orders already say. The card reads
@@ -256,6 +294,7 @@ apps/api/                 NestJS + Prisma API
     common/                 guards, decorators, Decimal and hashing helpers
     categories/             product categories and the warranty
                             default (§12-Б.1, §36-А.1)
+    advances/               ADV: taken, applied, refunded (§17-А)
     counterparties/         suppliers and cargo companies
     idempotency/            duplicate-request protection (Connectivity)
     currency/               CEX, the currency FIFO service and the
@@ -273,6 +312,7 @@ apps/api/                 NestJS + Prisma API
     pricing/                suggested price: base markup × type/category (§13)
     purchases/              PUR and the §6 logistics stages
     receipts/               RCV, landed cost, LOT and FIFO layers (§7, §9, §18.1)
+    reservations/           RSV: the hold, its policy and expiry (§17)
     reports/                Cash Flow classification (§3.1.5)
     security/               Security Log
     settings/               global parameters
@@ -294,7 +334,7 @@ apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
                             tills, CEX, alerts, receipt wizard, stock,
                             transfers, discrepancies, claims, the sale
                             screen, checkout, customers, my sales, the
-                            product catalogue and categories
+                            product catalogue and categories, reservations
   test/                     decimal-string helpers (the only client-side
                             code that looks at money)
 db/egomot_schema.sql      the authoritative data model

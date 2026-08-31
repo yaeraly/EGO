@@ -25,6 +25,11 @@ import { CategoriesPage } from './pages/CategoriesPage';
 import { ProductFormPage } from './pages/ProductFormPage';
 import { ProductPage } from './pages/ProductPage';
 import { ProductsPage } from './pages/ProductsPage';
+import { ReservationPage } from './pages/ReservationPage';
+import {
+  ReservationFormPage,
+  ReservationsPage,
+} from './pages/ReservationsPage';
 import { ProductStockPage, StockPage } from './pages/StockPage';
 import { TransfersPage, WarehousesPage } from './pages/TransfersPage';
 
@@ -71,6 +76,9 @@ function Router() {
         <Route path="/products/:id" element={<ProductPage />} />
         <Route path="/products/:id/edit" element={<ProductFormPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
+        <Route path="/reservations" element={<ReservationsPage />} />
+        <Route path="/reservations/new" element={<ReservationFormPage />} />
+        <Route path="/reservations/:id" element={<ReservationPage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/products/:id" element={<ProductStockPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />

@@ -276,4 +276,76 @@ export class StockRepository {
         `;
     return rows[0]?.unit_cost ?? null;
   }
+
+  /**
+   * Quantity held by live reservations, per product (§17, §42.2).
+   *
+   * "Live" is decided here rather than by the expiry job: a reservation past
+   * its expiry frees its stock at that moment ("ошол замат Reserved Stock'ту
+   * бошотот", §17.3), so the query excludes it whether or not the job has run
+   * yet. The job then only records the status.
+   *
+   * `excludeReservationId` is for the sale that fulfils a reservation: its own
+   * hold must not stand in its way.
+   */
+  async reservedByProduct(
+    db: Db,
+    filter: { productId?: string; excludeReservationId?: string } = {},
+  ): Promise<Map<string, Prisma.Decimal>> {
+    const rows = await db.$queryRaw<{ product_id: string; qty: Prisma.Decimal }[]>`
+      SELECT i.product_id, SUM(i.qty) AS qty
+      FROM reservation_items i
+      JOIN reservations r ON r.document_id = i.reservation_id
+      JOIN documents d ON d.id = r.document_id
+      WHERE r.rstatus = 'ACTIVE'
+        AND d.status = 'CONFIRMED'
+        AND r.expires_at > now()
+        AND (${filter.productId ?? null}::uuid IS NULL
+             OR i.product_id = ${filter.productId ?? null}::uuid)
+        AND (${filter.excludeReservationId ?? null}::uuid IS NULL
+             OR r.document_id <> ${filter.excludeReservationId ?? null}::uuid)
+      GROUP BY i.product_id
+    `;
+    return new Map(rows.map((row) => [row.product_id, row.qty]));
+  }
+
+  /** Everything on hand for one product in one warehouse. */
+  async warehouseQty(
+    db: Db,
+    productId: string,
+    warehouseId: string,
+  ): Promise<Prisma.Decimal> {
+    const [row] = await db.$queryRaw<{ qty: Prisma.Decimal | null }[]>`
+      SELECT SUM(s.qty) AS qty
+      FROM layer_stock s
+      JOIN fifo_layers l ON l.id = s.layer_id
+      WHERE l.product_id = ${productId}::uuid
+        AND s.warehouse_id = ${warehouseId}::uuid
+    `;
+    return row?.qty ?? new Prisma.Decimal(0);
+  }
+
+  /**
+   * Locks every stock row for one product in one warehouse.
+   *
+   * Two clerks confirming reservations for the same last unit have no row of
+   * their own to collide on — a reservation writes no stock. Taking the
+   * product's stock rows first makes them queue, and the second one's next
+   * read then sees the first one's committed hold.
+   */
+  async lockProductStock(
+    tx: Prisma.TransactionClient,
+    productId: string,
+    warehouseId: string,
+  ): Promise<void> {
+    await tx.$queryRaw`
+      SELECT s.layer_id
+      FROM layer_stock s
+      JOIN fifo_layers l ON l.id = s.layer_id
+      WHERE l.product_id = ${productId}::uuid
+        AND s.warehouse_id = ${warehouseId}::uuid
+      ORDER BY s.layer_id
+      FOR UPDATE
+    `;
+  }
 }

@@ -126,6 +126,20 @@ a {
   font-weight: 700;
 }
 
+/*
+ * A destructive action should not look like the primary one. Used for
+ * cancelling a reservation, deleting a category, removing an alias.
+ */
+button.danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+button.danger:disabled {
+  opacity: 0.5;
+}
+
 /* ---------- cards ---------- */
 
 .card {

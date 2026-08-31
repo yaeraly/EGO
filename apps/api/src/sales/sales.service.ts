@@ -20,6 +20,7 @@ import { DocumentPostingRegistry } from '../documents/document-posting.registry'
 import { DocumentsService } from '../documents/documents.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PricingService } from '../pricing/pricing.service';
+import { ReservationsService } from '../reservations/reservations.service';
 import { StockService } from '../stock/stock.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
 import {
@@ -99,6 +100,7 @@ export class SalesService
     private readonly repository: SalesRepository,
     private readonly customers: CustomersService,
     private readonly pricing: PricingService,
+    private readonly reservations: ReservationsService,
     private readonly stock: StockService,
     private readonly warehouses: WarehousesService,
     private readonly accounts: AccountsService,
@@ -137,15 +139,58 @@ export class SalesService
       );
     }
 
-    const customer = dto.customer_id
-      ? await this.customers.findOne(dto.customer_id)
-      : await this.customers.walkIn();
+    const reservation = dto.from_reservation
+      ? await this.reservations.findOne(dto.from_reservation)
+      : null;
+    if (reservation && !this.reservations.isLive(reservation)) {
+      throw new ConflictException(
+        `Бул бронь ${reservation.rstatus} — андан сатуу түзүлбөйт (§17)`,
+      );
+    }
+
+    const customer = reservation
+      ? await this.customers.findOne(reservation.customer_id)
+      : dto.customer_id
+        ? await this.customers.findOne(dto.customer_id)
+        : await this.customers.walkIn();
     if (!customer.is_active) {
       throw new BadRequestException('Кардар активдүү эмес');
     }
+    if (reservation && dto.customer_id && dto.customer_id !== customer.id) {
+      throw new ConflictException(
+        'Бронь башка кардардыкы — сатуу брондун кардарына түзүлөт (§17)',
+      );
+    }
 
     const warehouse = await this.warehouses.main();
-    const lines = await this.resolveLines(dto, customer.id, warehouse.id);
+    // §17.1: the price was fixed when the reservation was made, so the
+    // customer pays what they were quoted. The lines still go through the
+    // same pricing and costing path, because §13.4 is re-checked at
+    // confirmation against today's cost — §17.1 says so explicitly.
+    const items = reservation
+      ? reservation.reservation_items.map((item) => ({
+          product_id: item.product_id,
+          qty: item.qty.toFixed(2),
+          final_price: item.fixed_price.toFixed(2),
+          discount_reason: `Бронь ${reservation.documents.doc_number} боюнча бекитилген баа (§17.1)`,
+        }))
+      : dto.items;
+    const priced = await this.resolveLines(
+      { ...dto, items },
+      customer.id,
+      warehouse.id,
+    );
+    // §17.1 fixes the price when the reservation is made, so it *is* the
+    // price here — not a discount off whatever the list says today. §13.1's
+    // discount limit would otherwise refuse a sale nobody discounted. The one
+    // re-check §17.1 does ask for, §13.4 against today's cost, still runs.
+    const lines = reservation
+      ? priced.map((line) => ({
+          ...line,
+          autoPrice: line.finalPrice,
+          discountReason: null,
+        }))
+      : priced;
 
     return this.prisma.$transaction(async (tx) => {
       const document = await this.documents.create(tx, {
@@ -163,6 +208,13 @@ export class SalesService
         salesperson: userId,
         isLossSale: dto.is_loss_sale ?? false,
       });
+
+      if (reservation) {
+        await tx.sales.update({
+          where: { document_id: document.id },
+          data: { from_reservation: reservation.document_id },
+        });
+      }
 
       await this.repository.insertItems(
         tx,

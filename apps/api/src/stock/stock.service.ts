@@ -356,6 +356,81 @@ export class StockService {
     return this.repository.oldestUnitCost(db, productId, warehouseId);
   }
 
+  /** Serialises callers that are about to reason about one product's stock. */
+  lockProductStock(
+    tx: Prisma.TransactionClient,
+    productId: string,
+    warehouseId: string,
+  ): Promise<void> {
+    return this.repository.lockProductStock(tx, productId, warehouseId);
+  }
+
+  /** Everything on hand for one product in one warehouse. */
+  onHandInWarehouse(
+    productId: string,
+    warehouseId: string,
+    db: Db = this.prisma,
+  ): Promise<Prisma.Decimal> {
+    return this.repository.warehouseQty(db, productId, warehouseId);
+  }
+
+  /**
+   * What one product's live reservations hold (§17, §42.2).
+   *
+   * `excludeReservationId` names the reservation the caller is fulfilling, so
+   * a sale is never blocked by its own hold.
+   */
+  async reserved(
+    productId: string,
+    db: Db = this.prisma,
+    excludeReservationId?: string,
+  ): Promise<Prisma.Decimal> {
+    const rows = await this.repository.reservedByProduct(db, {
+      productId,
+      excludeReservationId,
+    });
+    return rows.get(productId) ?? ZERO;
+  }
+
+  /**
+   * Refuses to let a sale eat into someone else's reservation (§42.2).
+   *
+   * Checked inside the confirming transaction, beside the FIFO consumption it
+   * guards: physical stock alone would happily sell goods already promised.
+   */
+  async assertNotReserved(
+    tx: Prisma.TransactionClient,
+    params: {
+      productId: string;
+      sku: string;
+      warehouseId: string;
+      qty: Prisma.Decimal;
+      fulfilsReservationId?: string;
+    },
+  ): Promise<void> {
+    const held = await this.reserved(
+      params.productId,
+      tx,
+      params.fulfilsReservationId,
+    );
+    if (held.lessThanOrEqualTo(ZERO)) {
+      return;
+    }
+
+    const onHand = await this.repository.warehouseQty(
+      tx,
+      params.productId,
+      params.warehouseId,
+    );
+    const free = onHand.minus(held);
+    if (params.qty.greaterThan(free)) {
+      throw new ConflictException(
+        `${params.sku}: ${onHand.toFixed(2)} даанадан ${held.toFixed(2)} даанасы брондолгон — ` +
+          `сатууга ${Prisma.Decimal.max(free, ZERO).toFixed(2)} гана бар (§42.2)`,
+      );
+    }
+  }
+
   /** Layers with stock, oldest first — the FIFO queue Module 4 will consume. */
   availableLayers(productId: string, warehouseId: string, db: Db = this.prisma) {
     return this.repository.availableLayers(db, productId, warehouseId);
@@ -385,9 +460,9 @@ export class StockService {
    *
    * Available counts MAIN only: DEFECT holds goods that are deliberately not
    * for sale (§12-А.6), and reporting them as available is exactly the
-   * mistake that rule exists to prevent. Reserved is zero until §17
-   * introduces reservations; it is named here so the arithmetic that reads it
-   * does not have to change later.
+   * mistake that rule exists to prevent. Reserved is what live reservations
+   * hold (§17) and comes off the same figure, because §42.2 says reserved
+   * goods are not sold to anyone else.
    */
   async stockByProduct(
     filter: { productId?: string; warehouseId?: string } = {},
@@ -432,6 +507,14 @@ export class StockService {
           .plus(row.qty)
           .toFixed(2);
       }
+    }
+
+    // §17 fills in what the arithmetic below has always been ready for.
+    const reserved = await this.repository.reservedByProduct(db, {
+      productId: filter.productId,
+    });
+    for (const entry of byProduct.values()) {
+      entry.reserved_qty = (reserved.get(entry.product_id) ?? ZERO).toFixed(2);
     }
 
     for (const entry of byProduct.values()) {

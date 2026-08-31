@@ -1,4 +1,12 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+  forwardRef,
+} from '@nestjs/common';
 import {
   Prisma,
   approval_status,
@@ -7,6 +15,8 @@ import {
   user_role,
 } from '@prisma/client';
 import { AccountsService } from '../accounts/accounts.service';
+import { AdvancesService } from '../advances/advances.service';
+import { ReservationsService } from '../reservations/reservations.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthService } from '../auth/auth.service';
 import { roundMoney } from '../common/decimal';
@@ -76,6 +86,11 @@ export class SaleConfirmService {
     private readonly auth: AuthService,
     private readonly audit: AuditService,
     private readonly context: SaleConfirmContextHolder,
+    // forwardRef: advances settle debts through SalesRepository (§35.4) while
+    // a sale spends advances (§17-А.2) — the two modules refer to each other.
+    @Inject(forwardRef(() => AdvancesService))
+    private readonly advances: AdvancesService,
+    private readonly reservations: ReservationsService,
   ) {}
 
   async confirm(
@@ -142,7 +157,16 @@ export class SaleConfirmService {
         `Төлөм ${paid.toFixed(2)} сатуу суммасынан ашык (§15.1)`,
       );
     }
-    const outstanding = facts.finalTotal.minus(paid);
+    // §17-А.2: money the customer already gave us is not a debt and is not a
+    // second payment. It comes off before credit is weighed, so an advance
+    // that covers the sale never trips a credit limit (§17-А.3).
+    const advance = await this.advances.applyToSale(tx, {
+      customerId: sale.customer_id,
+      saleId: sale.document_id,
+      upTo: facts.finalTotal.minus(paid),
+    });
+
+    const outstanding = facts.finalTotal.minus(paid).minus(advance.applied);
 
     // 4. Security — the PIN, only when the sale departs from the fast path.
     await this.verifyPin(sale, context, {
@@ -201,6 +225,17 @@ export class SaleConfirmService {
     // 6. §18.1.4 — stock out, and the allocation that records where from.
     let totalCogs = ZERO;
     for (const item of sale.sale_items) {
+      // §42.2 — goods promised to someone else are not available here. The
+      // sale's own reservation is excluded: fulfilling a hold must not be
+      // blocked by the hold itself (§17).
+      await this.stock.assertNotReserved(tx, {
+        productId: item.product_id,
+        sku: item.products.sku,
+        warehouseId: warehouse.id,
+        qty: item.qty,
+        fulfilsReservationId: sale.from_reservation ?? undefined,
+      });
+
       const plan = await this.stock.consumeFifo(tx, {
         productId: item.product_id,
         warehouseId: warehouse.id,
@@ -249,6 +284,16 @@ export class SaleConfirmService {
           : debt_status.OPEN,
     });
 
+    // §17 — the hold has done its job; the goods have left. Marking it here
+    // rather than on a schedule keeps the reservation and the sale one fact.
+    if (sale.from_reservation) {
+      await this.reservations.markFulfilled(
+        tx,
+        sale.from_reservation,
+        document.id,
+      );
+    }
+
     await this.audit.log(
       {
         userId,
@@ -268,6 +313,8 @@ export class SaleConfirmService {
           paid_amount: paid.toFixed(2),
           change_given: change.toFixed(2),
           outstanding_amount: outstanding.toFixed(2),
+          advance_applied: advance.applied.toFixed(2),
+          from_reservation: sale.from_reservation,
           debt_due_date: sale.debt_due_date?.toISOString().slice(0, 10) ?? null,
           // §13.6 — a loss sale records what it cost the business, and its
           // bonus base is zero rather than negative.

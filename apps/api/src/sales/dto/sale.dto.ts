@@ -62,6 +62,18 @@ export class CreateSaleDto {
   @IsUUID()
   customer_id?: string;
 
+  /**
+   * The reservation this sale fulfils (§17).
+   *
+   * With it, the lines and their prices come from the reservation instead of
+   * the request: §17.1 fixes the price when the reservation is made, so the
+   * customer is charged what they were quoted.
+   */
+  @IsOptional()
+  @IsUUID()
+  from_reservation?: string;
+
+  @IsOptional()
   @IsArray()
   @ArrayMinSize(1, { message: 'a sale needs at least one line' })
   @ValidateNested({ each: true })

@@ -60,6 +60,30 @@ export const SettingKey = {
    */
   SHOW_COGS_TO_STAFF: 'sale.show_cogs_to_staff',
 
+
+  /**
+   * Reservation policy (§17.3).
+   *
+   * §17.3 names each of these but states no numbers — its 20 000 / 20% is
+   * introduced as "Мисалы". They are seeded unconfigured, and each has a
+   * defined meaning when unset, described on the seed entry: an unset limit
+   * does not silently become a guessed one.
+   */
+  RESERVATION_ADVANCE_REQUIRED_ABOVE_KGS: 'reservation.advance_required_above_kgs',
+  RESERVATION_MIN_ADVANCE_PCT: 'reservation.minimum_advance_pct',
+  RESERVATION_MAX_ACTIVE_PER_CUSTOMER: 'reservation.max_active_per_customer',
+  RESERVATION_MAX_NO_ADVANCE_HOURS: 'reservation.max_no_advance_hours',
+  RESERVATION_DEFAULT_DURATION_HOURS: 'reservation.default_duration_hours',
+
+  /**
+   * Cancellation fee, in percent of the advance (§17.2).
+   *
+   * §17.2 makes the default rule a full refund and says the fee is off in the
+   * MVP while the architecture stands ready for it. Unset means exactly that:
+   * a cancelled reservation refunds the advance in full.
+   */
+  RESERVATION_CANCELLATION_FEE_PCT: 'reservation.cancellation_fee_pct',
+
   /** Days before a debt falls due to warn the salesperson and OWNER (§16). */
   DEBT_DUE_WARNING_DAYS: 'debt.due_warning_days',
 } as const;
@@ -151,6 +175,42 @@ export const SEEDED_SETTINGS: SeededSetting[] = [
     value: false,
     description:
       'Whether a salesperson sees the FIFO COGS on the sale screen (§13.4 blocks below-cost sales either way).',
+  },
+  {
+    key: SettingKey.RESERVATION_ADVANCE_REQUIRED_ABOVE_KGS,
+    value: null,
+    description:
+      'Reservations at or above this KGS amount require an advance (§17.3). UNCONFIGURED — no amount-based requirement; a product-level rule still applies.',
+  },
+  {
+    key: SettingKey.RESERVATION_MIN_ADVANCE_PCT,
+    value: null,
+    description:
+      'Minimum advance as a percent of the reservation amount (§17.3). UNCONFIGURED — a reservation that needs an advance is refused rather than priced at a guessed percentage.',
+  },
+  {
+    key: SettingKey.RESERVATION_MAX_ACTIVE_PER_CUSTOMER,
+    value: null,
+    description:
+      'Most active reservations one customer may hold (§17.3). UNCONFIGURED — no limit.',
+  },
+  {
+    key: SettingKey.RESERVATION_MAX_NO_ADVANCE_HOURS,
+    value: null,
+    description:
+      'Longest a reservation with no advance may run, in hours (§17.3). UNCONFIGURED — no cap; set it, because §17.3 requires such reservations to be bounded.',
+  },
+  {
+    key: SettingKey.RESERVATION_DEFAULT_DURATION_HOURS,
+    value: null,
+    description:
+      'Default reservation duration in hours (§17.3). UNCONFIGURED — the expiry must then be stated on each reservation.',
+  },
+  {
+    key: SettingKey.RESERVATION_CANCELLATION_FEE_PCT,
+    value: null,
+    description:
+      'Percent of the advance withheld on cancellation (§17.2). UNCONFIGURED — the MVP default: the advance is refunded in full.',
   },
   {
     key: SettingKey.DEBT_DUE_WARNING_DAYS,
