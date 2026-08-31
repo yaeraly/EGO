@@ -4,12 +4,12 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–8 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–9 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
-returns.
-660 API tests and 11 client tests passing.
+returns; defect acts, write-offs and scrap income.
+671 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -73,6 +73,11 @@ returns.
 | 8.3 Debt offset, split refund and its source (§35.4, §35.5) | done |
 | 8.4 §36-А.2 warranty check on a defect return | done |
 | 8.5 UI: pick the sale, the lines and the condition; settle | done |
+| 9.1 Defect act (DEF): origin, finding, decision (§36-А.3, §37) | done |
+| 9.2 Write-off (WOF) out of DEFECT at each LOT's own cost (§38) | done |
+| 9.3 Open supplier claim settles first (§38.2) | done |
+| 9.4 Scrap income (OIN) and the net defect loss (§38.7) | done |
+| 9.5 UI: the act, the write-off and the metal money | done |
 
 Module 0 acceptance criteria:
 
@@ -199,8 +204,36 @@ Module 8 acceptance criteria:
 | 9 | §36-А.2: inside the warranty a defect return is ordinary; past it a salesperson cannot confirm at all and the OWNER only with a reason, which is stored | `test/returns.spec.ts` |
 | 10 | §35.8, §35.1.2: revenue and COGS reversed are recorded and the sale line marks what came back, while the sale itself is untouched | `test/returns.spec.ts` |
 
+Module 9 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §37: an act records its origin — a return or a receiving discrepancy — and one with neither is refused | `test/defects-writeoffs.spec.ts` |
+| 2 | §37: an act with no decision does not confirm; the four decisions are the ones the schema names | `test/defects-writeoffs.spec.ts` |
+| 3 | §38.4: goods leave DEFECT, and a write-off pointed at MAIN is refused | `test/defects-writeoffs.spec.ts` |
+| 4 | §38: each line is written off at its own LOT's landed cost | `test/defects-writeoffs.spec.ts` |
+| 5 | A write-off always takes a PIN | `test/defects-writeoffs.spec.ts` |
+| 6 | §42.5: more than the defect warehouse holds is refused | `test/defects-writeoffs.spec.ts` |
+| 7 | §38.2: an open supplier claim over the same product blocks the write-off, and settling it unblocks it | `test/defects-writeoffs.spec.ts` |
+| 8 | §38.7: the scrap money is a document of its own, in the till, against the write-off it came from | `test/defects-writeoffs.spec.ts` |
+| 9 | §38: net defect loss = written-off cost − scrap income (7 000 − 1 200 = 5 800) | `test/defects-writeoffs.spec.ts` |
+| 10 | §38: neither the loss nor the scrap income enters a bonus base | `test/defects-writeoffs.spec.ts` |
+
 ### Open questions
 
+- **An open claim blocks a write-off through the discrepancy it names**
+  (§38.2). A claim reaches a product only through its discrepancy, so that is
+  the link the check uses. A defect that came back from a customer has no
+  claim linked to it at all and nothing blocks it — if you want a claim raised
+  from a defect act to hold the goods too, that needs a column joining the
+  two, which the schema does not have today.
+- **Scrap income counts as operating cash** (§3.1.5). It is money the business
+  earned and is neither equity nor a move between its own accounts; §38 asks
+  only that it be its own income line, which the OIN document and its category
+  provide.
+- **A defect act moves no stock.** The goods are already in DEFECT — a return
+  put them there (§35.3) or damage on arrival did (§8.4). §37 asks the act for
+  the record and the decision, and §38 is what takes the goods off the books.
 - **The warranty test is made in dates** (§36-А.2). "Return Date ≤ Sale Date +
   Warranty Days" compares dates, so a same-day defect on a product with a
   zero-day term is inside the warranty rather than a day late. Times of day do
@@ -370,6 +403,7 @@ apps/api/                 NestJS + Prisma API
     customer-payments/      PAY and payment allocation (§16-А)
     customers/              customers, Walk-in, categories (§11, §12)
     discrepancies/          DIF and its §8.2-8.3 consequence
+    defects/                DEF: the act and its decision (§36-А.3, §37)
     documents/              numbering, status machine, posting registry
     handovers/              HND: the act and its sample (§21)
     inventories/            INV: count and LOT-level adjustment (§22)
@@ -391,6 +425,7 @@ apps/api/                 NestJS + Prisma API
     transfers/              TRN
     transfers-warehouse/    TRF between warehouses (§12-А.4-5)
     warehouses/             warehouse master data (§12-А.1)
+    write-offs/             WOF and OIN: scrapping and scrap income (§38)
     withdrawals/            WDW (§3.1)
   test/                     integration tests against a real database
 apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
@@ -404,7 +439,8 @@ apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
                             transfers, discrepancies, claims, the sale
                             screen, checkout, customers, my sales, the
                             product catalogue and categories, reservations,
-                            the count sheet, the handover act and returns
+                            the count sheet, the handover act, returns,
+                            defect acts and write-offs
   test/                     decimal-string helpers (the only client-side
                             code that looks at money)
 db/egomot_schema.sql      the authoritative data model

@@ -27,6 +27,9 @@ const CATEGORIES: Partial<Record<doc_type, CashFlowCategory>> = {
   [doc_type.CAP]: CashFlowCategory.CAPITAL_FINANCING,
   [doc_type.WDW]: CashFlowCategory.CAPITAL_FINANCING,
   [doc_type.TRN]: CashFlowCategory.INTERNAL_TRANSFER,
+  // §38.7 — scrap money is cash the business earned, not equity and not a
+  // move between its own accounts.
+  [doc_type.OIN]: CashFlowCategory.OPERATING,
   [doc_type.CEX]: CashFlowCategory.INTERNAL_TRANSFER,
 };
 

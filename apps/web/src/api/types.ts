@@ -828,3 +828,42 @@ export interface SaleDetail {
   }[];
   sale_payment_lines: { account_id: string; amount: string }[];
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Module 9 — defect act (DEF), write-off (WOF) and scrap income (OIN), §37, §38
+// ─────────────────────────────────────────────────────────────────────────
+
+export type DefectDecision = 'EXCHANGE' | 'REFUND' | 'CLAIM' | 'WRITEOFF';
+
+export interface DefectAct {
+  document_id: string;
+  return_id: string | null;
+  discrepancy_id: string | null;
+  product_id: string;
+  qty: string;
+  reason: string;
+  decision: DefectDecision | null;
+  checked_by: string | null;
+  products: { sku: string; name: string };
+  documents: { doc_number: string; status: string; business_date: string };
+}
+
+export interface WriteOff {
+  document_id: string;
+  total_cost: string;
+  write_off_items: {
+    id: string;
+    layer_id: string;
+    warehouse_id: string;
+    qty: string;
+    unit_cost: string;
+  }[];
+  documents: { doc_number: string; status: string; business_date: string };
+}
+
+/** §38's figure: what the defect cost once the scrap money is counted. */
+export interface DefectResult {
+  written_off_cost: string;
+  scrap_income: string;
+  net_loss: string;
+}
