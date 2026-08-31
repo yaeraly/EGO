@@ -30,6 +30,9 @@ const CATEGORIES: Partial<Record<doc_type, CashFlowCategory>> = {
   // §38.7 — scrap money is cash the business earned, not equity and not a
   // move between its own accounts.
   [doc_type.OIN]: CashFlowCategory.OPERATING,
+  // §26 — rent, internet, stationery. Batch freight is not here: §9 puts it
+  // into the landed cost, where it belongs.
+  [doc_type.EXP]: CashFlowCategory.OPERATING,
   [doc_type.CEX]: CashFlowCategory.INTERNAL_TRANSFER,
 };
 

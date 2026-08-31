@@ -4,12 +4,12 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–9 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–10 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
-returns; defect acts, write-offs and scrap income.
-671 API tests and 11 client tests passing.
+returns; defect acts, write-offs and scrap income; operating expenses.
+680 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -78,6 +78,10 @@ returns; defect acts, write-offs and scrap income.
 | 9.3 Open supplier claim settles first (§38.2) | done |
 | 9.4 Scrap income (OIN) and the net defect loss (§38.7) | done |
 | 9.5 UI: the act, the write-off and the metal money | done |
+| 10.1 Expense categories with a monthly ceiling (§26) | done |
+| 10.2 Expense (EXP): category, account, amount, comment | done |
+| 10.3 This month's spend against the ceiling | done |
+| 10.4 UI: record an expense, see the month against budget | done |
 
 Module 0 acceptance criteria:
 
@@ -219,8 +223,33 @@ Module 9 acceptance criteria:
 | 9 | §38: net defect loss = written-off cost − scrap income (7 000 − 1 200 = 5 800) | `test/defects-writeoffs.spec.ts` |
 | 10 | §38: neither the loss nor the scrap income enters a bonus base | `test/defects-writeoffs.spec.ts` |
 
+Module 10 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §2, §26: only the OWNER maintains the categories; everyone reads them | `test/expenses.spec.ts` |
+| 2 | A duplicate category name and a negative budget are refused | `test/expenses.spec.ts` |
+| 3 | §26: a confirmed expense takes the money out of the account it names, with its comment on the audit entry | `test/expenses.spec.ts` |
+| 4 | §42.5: an expense larger than the till holds is refused and the document stays a draft | `test/expenses.spec.ts` |
+| 5 | Category, comment and a positive amount are all required | `test/expenses.spec.ts` |
+| 6 | §3.1.5–6: an expense is an operating flow; an owner withdrawal never is | `test/expenses.spec.ts` |
+| 7 | §26: the monthly ceiling reports and never blocks — an expense over it is recorded, flagged and paid | `test/expenses.spec.ts` |
+| 8 | The month counts confirmed documents only; a draft is a plan, not a cost | `test/expenses.spec.ts` |
+| 9 | A category with no ceiling reports no remainder and is never over budget | `test/expenses.spec.ts` |
+
 ### Open questions
 
+- **Batch freight is not an expense, and the system cannot tell for you**
+  (§26). Freight that belongs to a consignment goes into the landed cost
+  through §9; only spending attached to no batch is an operating expense.
+  Nothing in the data distinguishes the two, so the expense screen says so and
+  the person entering it decides. Booking batch freight here would understate
+  stock and overstate the month at the same time.
+- **The monthly ceiling warns; it does not refuse.** §26 introduces budgets as
+  something that "could" warn, and an expense the business has already paid is
+  a fact whether or not it fits a budget. Over-budget shows on the screen and
+  in `GET /expenses/monthly`; nothing blocks. It does not raise a §39 alert
+  either — §39 does not list one, and an alert nobody asked for is noise.
 - **An open claim blocks a write-off through the discrepancy it names**
   (§38.2). A claim reaches a product only through its discrepancy, so that is
   the link the check uses. A defect that came back from a customer has no
@@ -405,6 +434,7 @@ apps/api/                 NestJS + Prisma API
     discrepancies/          DIF and its §8.2-8.3 consequence
     defects/                DEF: the act and its decision (§36-А.3, §37)
     documents/              numbering, status machine, posting registry
+    expenses/               EXP and its categories (§26)
     handovers/              HND: the act and its sample (§21)
     inventories/            INV: count and LOT-level adjustment (§22)
     ledgers/                supplier and cargo ledgers (§4.3, §5.2)
@@ -440,7 +470,7 @@ apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
                             screen, checkout, customers, my sales, the
                             product catalogue and categories, reservations,
                             the count sheet, the handover act, returns,
-                            defect acts and write-offs
+                            defect acts, write-offs and expenses
   test/                     decimal-string helpers (the only client-side
                             code that looks at money)
 db/egomot_schema.sql      the authoritative data model

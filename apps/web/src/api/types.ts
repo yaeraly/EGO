@@ -867,3 +867,38 @@ export interface DefectResult {
   scrap_income: string;
   net_loss: string;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Module 10 — operating expenses (EXP), §26
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  /** §26 — the OWNER's monthly ceiling; it warns, it does not refuse. */
+  monthly_budget: string | null;
+}
+
+export interface Expense {
+  document_id: string;
+  category_id: string;
+  account_id: string;
+  amount: string;
+  expense_categories: { name: string };
+  payment_accounts: { name: string; currency: CurrencyCode };
+  documents: {
+    doc_number: string;
+    status: string;
+    business_date: string;
+    comment: string | null;
+  };
+}
+
+export interface MonthlySpend {
+  category_id: string;
+  name: string;
+  monthly_budget: string | null;
+  spent: string;
+  remaining: string | null;
+  over_budget: boolean;
+}
