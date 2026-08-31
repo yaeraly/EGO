@@ -16,8 +16,13 @@
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "db:generate": "npm run prisma:generate --workspace @egomot/api",
-    "db:migrate": "npm run prisma:migrate --workspace @egomot/api",
-    "db:verify": "scripts/verify-schema-parity.sh"
+    "doctor": "scripts/doctor.sh",
+    "db:generate": "scripts/prisma.sh generate",
+    "db:deploy": "scripts/prisma.sh migrate deploy",
+    "db:migrate": "scripts/prisma.sh migrate dev",
+    "db:pull": "scripts/prisma.sh db pull",
+    "db:seed": "scripts/prisma.sh seed",
+    "db:verify": "scripts/verify-schema-parity.sh",
+    "setup": "npm run db:deploy && npm run db:generate && npm run db:seed && npm run build"
   }
 }

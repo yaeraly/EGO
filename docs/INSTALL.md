@@ -143,20 +143,21 @@ npm ci --include=dev          # --include=dev керек: NODE_ENV=production б
 cp .env.example .env
 chmod 600 .env
 
-# 4.6 Схема (ЭЭСИ менен)
-DATABASE_URL="$MIGRATION_DATABASE_URL" npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
-DATABASE_URL="$MIGRATION_DATABASE_URL" npx prisma generate      --schema apps/api/prisma/schema.prisma
+# 4.6 Схема (ЭЭСИ менен — db:deploy MIGRATION_DATABASE_URL'ди өзү тандайт)
+npm run db:deploy
+npm run db:generate
 
 # 4.7 Тиркеменин ролуна укук (1-миграция egomot_app ролун түзгөн)
 sudo -u postgres psql -d egomot -c "GRANT egomot_app TO egomot_app_user;"
 
 # 4.8 Seed (ЭЭСИ менен)
-cd apps/api && DATABASE_URL="$MIGRATION_DATABASE_URL" npx prisma db seed && cd ../..
+npm run db:seed
 
 # 4.9 Куруу
-npm run build --workspace @egomot/api
-npm run build --workspace @egomot/web
+npm run build
 ```
+
+4.6–4.9'дун ордуна бир команда: `npm run setup`.
 
 ---
 
@@ -238,12 +239,24 @@ sudo systemctl stop egomot-api
 
 git pull
 npm ci --include=dev
-DATABASE_URL="$MIGRATION_DATABASE_URL" npx prisma migrate deploy --schema apps/api/prisma/schema.prisma
-DATABASE_URL="$MIGRATION_DATABASE_URL" npx prisma generate      --schema apps/api/prisma/schema.prisma
-npm run build --workspace @egomot/api
-npm run build --workspace @egomot/web
+npm run setup                 # migrate → generate → seed → build
 
 sudo systemctl start egomot-api
+```
+
+`npm run setup` `.env` файлын өзү табат жана миграцияларды `MIGRATION_DATABASE_URL`
+(ээси) менен иштетет — кайсы каталогдон чакырсаң да. Ката чыкса:
+
+```bash
+npm run doctor                # эмне туура эмес экенин айтат
+```
+
+`apps/api/prisma/schema.prisma` — генерацияланган файл (`db/README.md`).
+`git pull` ага конфликт калтырса, кол менен оңдолбойт, ыргытылат:
+
+```bash
+git checkout -- apps/api/prisma/schema.prisma
+npm run db:pull
 ```
 
 Жаңыртуудан **мурун** backup жаса. Миграцияларды кайтаруу керек болсо

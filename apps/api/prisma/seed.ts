@@ -9,7 +9,12 @@ import {
   warehouse_type,
 } from '@prisma/client';
 import * as argon2 from 'argon2';
+import { loadEnvFile } from '../src/common/env-file';
 import { SEEDED_SETTINGS } from '../src/settings/setting-keys';
+
+// Before the client is constructed: PrismaClient reads DATABASE_URL once, at
+// construction. `prisma db seed` runs from apps/api, where there is no .env.
+const envFile = loadEnvFile();
 
 const prisma = new PrismaClient();
 
@@ -64,7 +69,10 @@ async function seedBootstrapOwner(): Promise<void> {
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(`${name} must be set to run the bootstrap seed`);
+    throw new Error(
+      `${name} must be set to run the bootstrap seed. ` +
+        `Copy the BOOTSTRAP_* block from .env.example into ${envFile ?? '.env'}.`,
+    );
   }
   return value;
 }

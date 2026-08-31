@@ -33,11 +33,17 @@ volume on first boot.
    `migration.sql` (forward DDL) and `down.sql` (CLAUDE.md: "Миграциялар
    кайтарылгыс болбосун — ар бирине down script"). Do not rewrite `0_init`;
    it is already applied everywhere.
-3. `npx prisma migrate deploy --schema apps/api/prisma/schema.prisma`
-4. `npx prisma db pull --schema apps/api/prisma/schema.prisma`
-5. `npx prisma generate --schema apps/api/prisma/schema.prisma`
+3. `npm run db:deploy`
+4. `npm run db:pull` — rewrites `schema.prisma` from the migrated database
+5. `npm run db:generate`
 6. `npm run db:verify` — proves the reference SQL and the migrations still
    describe the same schema.
+
+Each of those reads the repository-root `.env` and prefers
+`MIGRATION_DATABASE_URL` (the owner role) over `DATABASE_URL`, from whatever
+directory it is run in. Because step 4 overwrites `schema.prisma` wholesale, a
+merge conflict in that file is never resolved by hand — take either side
+(`git checkout -- apps/api/prisma/schema.prisma`) and regenerate.
 
 ### Writing a down script
 

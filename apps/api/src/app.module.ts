@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { enableBigIntJson } from './common/bigint-json';
+import { findEnvFile } from './common/env-file';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
@@ -46,7 +47,9 @@ enableBigIntJson();
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    // The repository-root `.env`, found from this file rather than from cwd:
+    // npm workspaces start the API in `apps/api`, where there is no `.env`.
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: findEnvFile() ?? [] }),
     ScheduleModule.forRoot(),
     PrismaModule,
     SecurityLogModule,

@@ -291,12 +291,50 @@ docker compose exec api npx prisma db seed
 **`docs/INSTALL.md`** covers the manual steps, systemd and nginx for
 production, backups, upgrades and troubleshooting.
 
+## After `git pull`
+
+```bash
+npm install        # only when package.json changed
+npm run setup      # migrate → generate → seed → build
+```
+
+`npm run doctor` says what is wrong when that fails. It reports causes rather
+than consequences: an unresolved merge conflict, a missing `.env`, an
+ungenerated Prisma client, a database that is not running or not migrated.
+
+`apps/api/prisma/schema.prisma` is generated (`db/README.md`), so a merge
+conflict in it is discarded, not resolved by hand:
+
+```bash
+git checkout -- apps/api/prisma/schema.prisma
+npm run db:pull    # regenerate it from the migrated database
+```
+
+Left unresolved, its conflict markers stop `prisma generate`, `@prisma/client`
+is never written, and `npm run build` then prints hundreds of type errors that
+all have that one cause.
+
 ## Running
 
 ```bash
 npm run dev:api    # API → http://localhost:3000/api
 npm run dev:web    # web → http://localhost:5173
 ```
+
+Every `db:*` script reads the repository-root `.env` and works from any
+directory. Where a machine has the two database roles of `docs/INSTALL.md` §3,
+they use `MIGRATION_DATABASE_URL` — the owner role — for migrations, and leave
+`DATABASE_URL` to the restricted role the application runs as.
+
+| | |
+|---|---|
+| `npm run doctor` | what is wrong with this working copy |
+| `npm run setup` | migrate, generate, seed, build |
+| `npm run db:deploy` | apply migrations |
+| `npm run db:generate` | regenerate the Prisma client |
+| `npm run db:pull` | regenerate `schema.prisma` from the database |
+| `npm run db:seed` | bootstrap OWNER, accounts, warehouses, walk-in, settings |
+| `npm run db:verify` | reference SQL and migrations still agree |
 
 ### Tests
 
