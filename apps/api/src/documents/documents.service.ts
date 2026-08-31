@@ -180,6 +180,28 @@ export class DocumentsService {
   }
 
   /**
+   * Marks a document confirmed inside a transaction already under way,
+   * without running a poster.
+   *
+   * For documents another document raises as part of its own posting — a LOT
+   * and its discrepancies are both created by a Receipt (§18.1, §8) — and
+   * which are therefore already a posted fact by the time they exist. Calling
+   * `confirm()` for them would open a second transaction and re-enter the
+   * posting registry, so this does the one thing that is left: record the
+   * status, in the caller's transaction, with the caller's audit trail.
+   */
+  async markConfirmedWithoutPosting(
+    tx: Prisma.TransactionClient,
+    documentId: string,
+  ): Promise<documents> {
+    const document = await this.repository.findById(tx, documentId);
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+    return this.repository.markConfirmed(tx, documentId, document.created_by);
+  }
+
+  /**
    * DRAFT -> CANCELLED.
    *
    * Only a draft can be cancelled. A confirmed document has already moved

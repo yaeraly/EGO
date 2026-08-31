@@ -44,7 +44,11 @@ export class SupplierLedgerRepository {
    * debt as negative, and negating once here keeps every caller from having to
    * remember the sign.
    */
-  async openDebt(
+  /**
+   * The raw sum of one entry stream, in the ledger's own sign convention:
+   * negative means we owe, positive means they do.
+   */
+  async streamBalance(
     tx: Db,
     supplierId: string,
     entryTypes: readonly string[],
@@ -58,10 +62,23 @@ export class SupplierLedgerRepository {
       WHERE supplier_id = ${supplierId}::uuid
         AND entry_type = ANY(${entryTypes as string[]})
     `;
-    return {
-      amount: (row.amount ?? ZERO).negated(),
-      kgsValue: (row.kgs ?? ZERO).negated(),
-    };
+    return { amount: row.amount ?? ZERO, kgsValue: row.kgs ?? ZERO };
+  }
+
+  /**
+   * Open debt, as a positive number.
+   *
+   * The debt stream sums negative when we owe, and every caller here asks
+   * "how much is owed", so the sign is flipped once, here, rather than at
+   * each call site.
+   */
+  async openDebt(
+    tx: Db,
+    supplierId: string,
+    entryTypes: readonly string[],
+  ): Promise<OpenBalance> {
+    const raw = await this.streamBalance(tx, supplierId, entryTypes);
+    return { amount: raw.amount.negated(), kgsValue: raw.kgsValue.negated() };
   }
 
   async balance(db: Db, supplierId: string): Promise<Prisma.Decimal> {

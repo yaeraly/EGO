@@ -11,6 +11,12 @@ import { CargoPaymentsModule } from './cargo-payments/cargo-payments.module';
 import { CounterpartiesModule } from './counterparties/counterparties.module';
 import { LedgersModule } from './ledgers/ledgers.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ClaimsModule } from './claims/claims.module';
+import { DiscrepanciesModule } from './discrepancies/discrepancies.module';
+import { ReceiptsModule } from './receipts/receipts.module';
+import { StockModule } from './stock/stock.module';
+import { WarehouseTransfersModule } from './transfers-warehouse/warehouse-transfers.module';
+import { WarehousesModule } from './warehouses/warehouses.module';
 import { CurrencyModule } from './currency/currency.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -58,6 +64,12 @@ enableBigIntJson();
     PurchaseViewModule,
     CargoPaymentsModule,
     NotificationsModule,
+    WarehousesModule,
+    StockModule,
+    WarehouseTransfersModule,
+    ReceiptsModule,
+    DiscrepanciesModule,
+    ClaimsModule,
     SettingsModule,
   ],
   controllers: [HealthController],

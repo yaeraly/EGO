@@ -7,6 +7,7 @@ import {
   CARGO_DEBT_ENTRIES,
   CargoEntry,
   SUPPLIER_DEBT_ENTRIES,
+  SUPPLIER_PREPAY_ENTRIES,
   SupplierEntry,
 } from './ledger-entry-types';
 import {
@@ -127,6 +128,116 @@ export class SupplierLedgerService {
         kgsValue: params.prepayActualKgs,
       });
     }
+  }
+
+  /**
+   * The advance the supplier is holding for us (§4.3).
+   *
+   * Positive means they owe us goods or money; that is what a later Receipt
+   * draws on. Debt and advances are tracked as separate streams, so this
+   * cannot be read off the overall balance.
+   */
+  openPrepayment(tx: Db, supplierId: string): Promise<OpenBalance> {
+    // Read in the ledger's own signs, not flipped: an advance is a positive
+    // balance, the opposite of debt, so `openDebt`'s negation would invert it.
+    return this.repository.streamBalance(tx, supplierId, SUPPLIER_PREPAY_ENTRIES);
+  }
+
+  /**
+   * Uses an advance against a payable (§4.3, second half).
+   *
+   * Two entries, because two things are true at once: the advance is spent
+   * (PREPAYMENT_APPLY, negative) and the debt it settles is released. The
+   * debt goes at the rate it was recognised at and the advance at what it
+   * actually cost, so the gap between them is the exchange result (§10.2) —
+   * the same arithmetic a cash payment does, with an advance in place of the
+   * till.
+   */
+  async applyPrepayment(
+    tx: Prisma.TransactionClient,
+    params: {
+      supplierId: string;
+      documentId: string;
+      /** Yuan of advance being used. */
+      amountCny: Prisma.Decimal;
+      /** Its actual KGS cost, taken from the advance's own carried value. */
+      actualKgs: Prisma.Decimal;
+      /** What the debt it settles was recognised at (§10.1). */
+      recognisedKgs: Prisma.Decimal;
+    },
+  ): Promise<void> {
+    if (params.amountCny.lessThanOrEqualTo(0)) {
+      return;
+    }
+
+    // Spending the advance: it leaves at what it cost us.
+    await this.repository.insert(tx, {
+      supplierId: params.supplierId,
+      documentId: params.documentId,
+      entryType: SupplierEntry.PREPAYMENT_APPLY,
+      amountCny: params.amountCny.negated(),
+      kgsValue: params.actualKgs.negated(),
+    });
+
+    // Settling the debt: it is released at what it was booked at, so a fully
+    // settled supplier nets to zero on both columns.
+    await this.repository.insert(tx, {
+      supplierId: params.supplierId,
+      documentId: params.documentId,
+      entryType: SupplierEntry.PAYMENT,
+      amountCny: params.amountCny,
+      kgsValue: params.recognisedKgs,
+    });
+  }
+
+  /**
+   * Money already paid for goods that never arrived (§8.2).
+   *
+   * It is not a cost and it does not raise anyone's landed cost — it is a
+   * claim on the supplier, held in CNY because that is the currency the debt
+   * was in.
+   */
+  async recordReceivable(
+    tx: Prisma.TransactionClient,
+    params: {
+      supplierId: string;
+      documentId: string;
+      amountCny: Prisma.Decimal;
+      kgsValue: Prisma.Decimal;
+    },
+  ): Promise<void> {
+    await this.repository.insert(tx, {
+      supplierId: params.supplierId,
+      documentId: params.documentId,
+      entryType: SupplierEntry.RECEIVABLE,
+      amountCny: params.amountCny,
+      kgsValue: params.kgsValue,
+    });
+  }
+
+  /**
+   * Reduces the payable for goods not yet paid for that never arrived (§8.3).
+   *
+   * No artificial receivable is invented here: we simply owe less. The entry
+   * is a PAYMENT in the debt stream because it closes debt without money
+   * moving, which is exactly what §8.3 describes.
+   */
+  async reducePayable(
+    tx: Prisma.TransactionClient,
+    params: {
+      supplierId: string;
+      documentId: string;
+      amountCny: Prisma.Decimal;
+      kgsValue: Prisma.Decimal;
+    },
+  ): Promise<void> {
+    await this.repository.insert(tx, {
+      supplierId: params.supplierId,
+      documentId: params.documentId,
+      entryType: SupplierEntry.PAYMENT,
+      amountCny: params.amountCny,
+      kgsValue: params.kgsValue,
+    });
   }
 
   balance(supplierId: string, db: Db = this.prisma): Promise<Prisma.Decimal> {

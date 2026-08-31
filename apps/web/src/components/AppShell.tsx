@@ -35,21 +35,21 @@ export function AppShell() {
           <span className="icon">📦</span>
           Сатып алуу
         </NavLink>
-        <NavLink to="/suppliers">
-          <span className="icon">🏭</span>
-          Поставщик
+        <NavLink to="/receipts">
+          <span className="icon">📥</span>
+          Приход
         </NavLink>
-        <NavLink to="/cargo">
-          <span className="icon">🚚</span>
-          Карго
-        </NavLink>
-        <NavLink to="/accounts">
-          <span className="icon">💰</span>
-          Касса
+        <NavLink to="/stock">
+          <span className="icon">🏬</span>
+          Склад
         </NavLink>
         <NavLink to="/notifications">
           <span className="icon">🔔</span>
           {unread > 0 ? <span className="badge">{unread}</span> : 'Эскертүү'}
+        </NavLink>
+        <NavLink to="/menu">
+          <span className="icon">☰</span>
+          Дагы
         </NavLink>
       </nav>
     </>

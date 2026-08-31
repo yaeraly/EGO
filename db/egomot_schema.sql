@@ -487,6 +487,38 @@ CREATE TABLE receipt_expenses (
   is_paid     BOOLEAN NOT NULL DEFAULT false
 );
 
+-- Приходдун позициялары — §7, §8.1
+--
+-- LOT приход ТАСТЫКТАЛГАНДА гана түзүлөт (§18.1), ошондуктан DRAFT/READY
+-- абалында фактически кабыл алынган сандар ушул жерде турат. Тастыкталганда
+-- ар бир сап lot_items'ке айланат.
+CREATE TABLE receipt_items (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  receipt_id   UUID NOT NULL REFERENCES receipts(document_id),
+  product_id   UUID NOT NULL REFERENCES products(id),
+  -- Позициянын документтеги туруктуу тартиби — §9.9 эреже 5 (tie-break).
+  position     INT NOT NULL,
+  ordered_qty  NUMERIC(12,2) NOT NULL CHECK (ordered_qty >= 0),
+  received_qty NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (received_qty >= 0),
+  -- Кабыл алынгандын ичинен брак болгону (§8.4 v2.1): DEFECT складга кирет,
+  -- landed cost'у ошол эле. received_qty'ге КИРЕТ — физикалык кабыл алынган.
+  damaged_qty  NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (damaged_qty >= 0),
+  CHECK (damaged_qty <= received_qty),
+  UNIQUE (receipt_id, product_id)
+);
+CREATE INDEX idx_receipt_items_receipt ON receipt_items(receipt_id, position);
+
+-- MANUAL allocation'дын киргизилген суммалары — §9.6
+-- LOT жок кезде OWNER сумманы receipt позициясына жазат; тастыкталганда
+-- expense_allocations'ке lot_item боюнча көчөт.
+CREATE TABLE receipt_expense_manual_allocations (
+  id              BIGSERIAL PRIMARY KEY,
+  expense_id      UUID NOT NULL REFERENCES receipt_expenses(id) ON DELETE CASCADE,
+  receipt_item_id UUID NOT NULL REFERENCES receipt_items(id) ON DELETE CASCADE,
+  amount_kgs      NUMERIC(14,2) NOT NULL CHECK (amount_kgs >= 0),
+  UNIQUE (expense_id, receipt_item_id)
+);
+
 -- LOT — §18.1: приход тастыкталганда түзүлөт
 CREATE TABLE lots (
   document_id UUID PRIMARY KEY REFERENCES documents(id),
@@ -506,7 +538,9 @@ CREATE TABLE lot_items (
   unit_weight_kg NUMERIC(10,3) NOT NULL,             -- §9.1 милдеттүү
   purchase_price_cny NUMERIC(14,2) NOT NULL,
   purchase_cost_kgs  NUMERIC(14,2) NOT NULL,
-  unit_landed_cost   NUMERIC(14,4) NOT NULL          -- §9.7: бекитилгенден кийин ӨЗГӨРБӨЙТ
+  unit_landed_cost   NUMERIC(14,4) NOT NULL,         -- §9.7: бекитилгенден кийин ӨЗГӨРБӨЙТ
+  damaged_qty NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (damaged_qty >= 0), -- §8.4: DEFECT'ке
+  CONSTRAINT lot_items_damaged_qty_check1 CHECK (damaged_qty <= received_qty)
 );
 
 -- Allocation аудити — §9.6, §9.9: Σ allocated = expense.kgs_amount (0.01 тактыкта)
@@ -604,8 +638,11 @@ CREATE TABLE claims (                        -- CLM — §8.5
   amount      NUMERIC(14,2) NOT NULL,
   currency    currency_code NOT NULL,
   cstatus     claim_status NOT NULL DEFAULT 'OPEN',
+  writeoff_reason TEXT,                      -- §8.5: WRITTEN_OFF'то милдеттүү
   CHECK ((ctype='SUPPLIER_CLAIM' AND supplier_id IS NOT NULL)
-      OR (ctype='CARGO_CLAIM' AND cargo_company_id IS NOT NULL))
+      OR (ctype='CARGO_CLAIM' AND cargo_company_id IS NOT NULL)),
+  CONSTRAINT claims_check1
+    CHECK (cstatus <> 'WRITTEN_OFF' OR writeoff_reason IS NOT NULL)
 );
 
 CREATE TABLE claim_compensations (           -- §8.7

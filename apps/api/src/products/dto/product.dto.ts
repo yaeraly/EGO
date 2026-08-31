@@ -51,6 +51,35 @@ export class CreateProductDto {
   @Matches(DECIMAL_PATTERN, { message: `weight_kg ${DECIMAL_MESSAGE}` })
   weight_kg?: string;
 
+  /**
+   * Dimensions and volumetric weight (§9.4).
+   *
+   * Optional in general, but an expense allocated by VOLUME refuses to
+   * confirm a receipt without one of these on every line it touches, because
+   * a light bulky part would otherwise carry a freight share set by its
+   * weight — which is exactly the distortion §9.4 exists to prevent.
+   */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `length_cm ${DECIMAL_MESSAGE}` })
+  length_cm?: string;
+
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `width_cm ${DECIMAL_MESSAGE}` })
+  width_cm?: string;
+
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `height_cm ${DECIMAL_MESSAGE}` })
+  height_cm?: string;
+
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `volume_m3 ${DECIMAL_MESSAGE}` })
+  volume_m3?: string;
+
+  /** What the carrier bills by, when it bills by volume (§9.4). */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `chargeable_weight_kg ${DECIMAL_MESSAGE}` })
+  chargeable_weight_kg?: string;
+
   @IsOptional()
   @IsUUID()
   main_supplier_id?: string;
@@ -95,6 +124,35 @@ export class UpdateProductDto {
   @IsOptional()
   @Matches(DECIMAL_PATTERN, { message: `weight_kg ${DECIMAL_MESSAGE}` })
   weight_kg?: string;
+
+  /**
+   * Dimensions and volumetric weight (§9.4).
+   *
+   * Optional in general, but an expense allocated by VOLUME refuses to
+   * confirm a receipt without one of these on every line it touches, because
+   * a light bulky part would otherwise carry a freight share set by its
+   * weight — which is exactly the distortion §9.4 exists to prevent.
+   */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `length_cm ${DECIMAL_MESSAGE}` })
+  length_cm?: string;
+
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `width_cm ${DECIMAL_MESSAGE}` })
+  width_cm?: string;
+
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `height_cm ${DECIMAL_MESSAGE}` })
+  height_cm?: string;
+
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `volume_m3 ${DECIMAL_MESSAGE}` })
+  volume_m3?: string;
+
+  /** What the carrier bills by, when it bills by volume (§9.4). */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `chargeable_weight_kg ${DECIMAL_MESSAGE}` })
+  chargeable_weight_kg?: string;
 
   @IsOptional()
   @IsUUID()

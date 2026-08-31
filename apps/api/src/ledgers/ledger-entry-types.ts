@@ -37,6 +37,20 @@ export const SUPPLIER_DEBT_ENTRIES: readonly string[] = [
   SupplierEntry.PREPAYMENT_APPLY,
 ];
 
+/**
+ * The advance stream, as distinct from debt.
+ *
+ * An advance is money already spent at a known cost; it is drawn down by
+ * PREPAYMENT_APPLY when a Receipt puts it against a payable (§4.3). Keeping
+ * it separate from the debt stream is what lets a supplier owe us an advance
+ * and be owed a payable at the same time without the two cancelling into a
+ * single meaningless number.
+ */
+export const SUPPLIER_PREPAY_ENTRIES: readonly string[] = [
+  SupplierEntry.PREPAYMENT,
+  SupplierEntry.PREPAYMENT_APPLY,
+];
+
 /** Cargo ledger (§5.2). Same convention, in USD. */
 export const CargoEntry = {
   /** Cargo cost recognised at Receipt (§5.2). Module 3. Negative. */

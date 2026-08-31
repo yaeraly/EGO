@@ -4,9 +4,9 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Module 0 — Foundation: complete. Module 1 — Capital and currency: complete.
-Module 2 — Purchasing and counterparty payments: complete.**
-345 API tests and 11 client tests passing.
+**Modules 0–3 complete.** Foundation; capital and currency; purchasing and
+counterparty payments; receipt, landed cost, LOT/FIFO and warehouses.
+476 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -28,6 +28,16 @@ Module 2 — Purchasing and counterparty payments: complete.**
 | 2.6 Cargo payment (CPY) — USD till or som at a stated rate | done |
 | 2.7 Alerts (§39, the part Module 2 can observe) | done |
 | 2.8 Mobile-first UI: purchase list and card, SPY/CPY, ledgers | done |
+| 3.1 Warehouses (§12-А), MAIN and DEFECT seeded | done |
+| 3.2 Stock core: FIFO layers, layer stock, movements | done |
+| 3.3 Warehouse transfer (TRF), Day Close blocker | done |
+| 3.4 Receipt (RCV): lines, expenses, rates | done |
+| 3.5 Confirmation blocks (§7, §9.8) | done |
+| 3.6 Allocation engine — pure, four bases, §9.9 rounding | done |
+| 3.7 Confirm → LOT, FIFO layers, prepayment apply | done |
+| 3.8 Discrepancy (DIF) and its §8.2–8.3 consequence | done |
+| 3.9 Claim (CLM), compensation, write-off | done |
+| 3.10 Mobile-first UI: receipt wizard, stock, DIF, CLM | done |
 
 Module 0 acceptance criteria:
 
@@ -63,8 +73,40 @@ Module 2 acceptance criteria:
 Module 2 also added the payment-status read model (`test/purchase-view.spec.ts`)
 and the §39 alerts (`test/notifications.spec.ts`).
 
+Module 3 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §9.9 rounding: 1 000.00 over three equal weights → 333.34 + 333.33 + 333.33; and Σ = Source over 10 000 random weightings | `test/allocation.spec.ts` |
+| 2 | §8.1: 100 ordered, 90 arrive → Inventory 90 000, the missing 10 000 stays out of landed cost, DIF raised | `test/receipts.spec.ts`, `test/discrepancies.spec.ts` |
+| 3 | §8.2/§8.3: paid → Supplier Receivable; unpaid → the payable shrinks and no receivable is invented | `test/discrepancies.spec.ts` |
+| 4 | §9.3, §9.7: two products, 1 400 KGS by weight → 1 000 : 400, and the unit landed cost that follows | `test/receipts.spec.ts` |
+| 5 | §9.4: VOLUME with no volume data blocks the receipt, naming the product | `test/receipts.spec.ts` |
+| 6 | §8.4: 10 received, 2 damaged → 8 MAIN, 2 DEFECT, one unit cost, DEFECT outside Available | `test/receipts.spec.ts` |
+| 7 | §12-А.5: a transfer does not change the layer cost, and a sent transfer blocks the day close | `test/warehouse-transfers.spec.ts` |
+| 8 | §4.3: a 2 000 CNY advance against a 5 000 CNY payable leaves 3 000, with the §10.2 result | `test/prepayment-apply.spec.ts` |
+| 9 | §42.5: stock never goes negative, and the transaction rolls back whole | `test/stock.spec.ts` |
+| 10 | §27.1, §18.1.6.3: a confirmed receipt refuses changes; no endpoint writes a layer cost | `test/receipts.spec.ts`, `test/stock.spec.ts` |
+
 ### Open questions
 
+- **A receipt values goods at one blended CNY rate.** §10.1 sets the rate per
+  *portion* — paid yuan at what they actually cost, unpaid yuan at the
+  reference rate — while the LOT records a single rate and source (§18.1.1).
+  The stored rate is the exact weighted average of the two, so the KGS value
+  is precisely what §10.1 asks for; the *source* is labelled FACTUAL only when
+  every yuan has been paid, REFERENCE otherwise, and the exact split is in the
+  Audit Log. If a part-paid order should record both rates separately, that
+  needs a schema change.
+- **A shortage splits between §8.2 and §8.3 by the order's paid share.**
+  §8.3 states the rule in halves — what was paid becomes a receivable, what
+  was not reduces the payable — without saying how to divide a part-paid
+  order. The paid proportion of that purchase is used, so a half-paid order
+  splits a shortage in half. Payments made to the supplier's general debt
+  rather than to this order do not count towards it. Worth confirming.
+- **Excess is received but not valued** (§8.8): the DIF stays OPEN and the
+  extra units do not enter stock, because §8.8 gives no cost rule and says the
+  goods enter "per a documented decision". The decision workflow is not built.
 - **The payable is recognised in CNY at the reference rate of the day the
   order is confirmed** (§4.2, §10.1), and a later payment's FX result is
   measured against that. The knowledge base states the debt is a yuan debt and
@@ -116,10 +158,12 @@ apps/api/                 NestJS + Prisma API
     migrations/1_append_only_logs/
     migrations/2_idempotency_keys/
     migrations/3_purchases_and_notifications/
+    migrations/4_receipt_items_and_claims/
                             each carries a down.sql alongside migration.sql
     seed.ts                 bootstrap OWNER, accounts, setting keys
   src/
     accounts/               payment accounts, balances, movement posting
+    allocation/             the §9.3-9.9 allocation engine (pure)
     audit/                  append-only Audit Log (§27)
     auth/                   login, JWT, PIN
     business-days/          Period Lock
@@ -130,17 +174,23 @@ apps/api/                 NestJS + Prisma API
     idempotency/            duplicate-request protection (Connectivity)
     currency/               CEX, the currency FIFO service and the
                             reference rate (§10-А, §10.1)
+    claims/                 CLM, compensation, write-off (§8.5, §8.7)
+    discrepancies/          DIF and its §8.2-8.3 consequence
     documents/              numbering, status machine, posting registry
     ledgers/                supplier and cargo ledgers (§4.3, §5.2)
     notifications/          in-app alerts and the daily digest (§39)
     products/               minimal product master
     purchase-view/          purchase list and card read model (§4.2)
     purchases/              PUR and the §6 logistics stages
+    receipts/               RCV, landed cost, LOT and FIFO layers (§7, §9, §18.1)
     reports/                Cash Flow classification (§3.1.5)
     security/               Security Log
     settings/               global parameters
+    stock/                  the only door into layer_stock (§12-А, §42.4-5)
     supplier-payments/      SPY, FIFO consumption, FX result (§4.3, §10.2)
     transfers/              TRN
+    transfers-warehouse/    TRF between warehouses (§12-А.4-5)
+    warehouses/             warehouse master data (§12-А.1)
     withdrawals/            WDW (§3.1)
   test/                     integration tests against a real database
 apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
@@ -150,7 +200,8 @@ apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
     components/             shell, badges, money rendering, till picker
     hooks/                  GET helper, unread-alert poll
     pages/                  login, purchases, counterparties, payments,
-                            tills, CEX, alerts
+                            tills, CEX, alerts, receipt wizard, stock,
+                            transfers, discrepancies, claims
   test/                     decimal-string helpers (the only client-side
                             code that looks at money)
 db/egomot_schema.sql      the authoritative data model

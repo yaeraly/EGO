@@ -1,4 +1,12 @@
-import { Prisma, PrismaClient, account_type, currency_code, user_role, user_status } from '@prisma/client';
+import {
+  Prisma,
+  PrismaClient,
+  account_type,
+  currency_code,
+  user_role,
+  user_status,
+  warehouse_type,
+} from '@prisma/client';
 import * as argon2 from 'argon2';
 import { SEEDED_SETTINGS } from '../src/settings/setting-keys';
 
@@ -142,6 +150,41 @@ async function seedPaymentAccounts(): Promise<void> {
  * Seeds the setting *keys*. An existing key keeps its value — re-running the
  * seed must never overwrite what an OWNER configured.
  */
+/**
+ * The two warehouses the system cannot work without (§12-А).
+ *
+ * MAIN is what is for sale; DEFECT holds goods that are deliberately outside
+ * Available Stock (§12-А.6), and a receipt puts damaged goods straight into
+ * it (§8.4). SERVICE, TRANSIT and BRANCH are added later as needed, without
+ * changing the model (§12-А.7).
+ */
+const WAREHOUSES: { code: string; name: string; wtype: warehouse_type }[] = [
+  { code: 'MAIN', name: 'Негизги склад', wtype: warehouse_type.MAIN },
+  { code: 'DEFECT', name: 'Брак склады', wtype: warehouse_type.DEFECT },
+];
+
+async function seedWarehouses(): Promise<void> {
+  let created = 0;
+
+  for (const warehouse of WAREHOUSES) {
+    const exists = await prisma.warehouses.findUnique({
+      where: { code: warehouse.code },
+      select: { id: true },
+    });
+    if (exists) {
+      continue;
+    }
+    await prisma.warehouses.create({ data: warehouse });
+    created += 1;
+  }
+
+  console.log(
+    created > 0
+      ? `Warehouses created: ${created}`
+      : 'Warehouses already present; nothing to create.',
+  );
+}
+
 async function seedSettings(): Promise<void> {
   let created = 0;
 
@@ -182,6 +225,7 @@ async function seedSettings(): Promise<void> {
 async function main(): Promise<void> {
   await seedBootstrapOwner();
   await seedPaymentAccounts();
+  await seedWarehouses();
   await seedSettings();
 }
 

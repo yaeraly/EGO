@@ -207,6 +207,7 @@ model claims {
   amount              Decimal               @db.Decimal(14, 2)
   currency            currency_code
   cstatus             claim_status          @default(OPEN)
+  writeoff_reason     String?
   claim_compensations claim_compensations[]
   cargo_companies     cargo_companies?      @relation(fields: [cargo_company_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   discrepancies       discrepancies?        @relation(fields: [discrepancy_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction)
@@ -586,6 +587,7 @@ model lot_items {
   purchase_price_cny  Decimal               @db.Decimal(14, 2)
   purchase_cost_kgs   Decimal               @db.Decimal(14, 2)
   unit_landed_cost    Decimal               @db.Decimal(14, 4)
+  damaged_qty         Decimal               @default(0) @db.Decimal(12, 2)
   expense_allocations expense_allocations[]
   fifo_layers         fifo_layers[]
   lots                lots                  @relation(fields: [lot_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction)
@@ -712,6 +714,7 @@ model products {
   suppliers                    suppliers?               @relation(fields: [main_supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_products_supplier")
   product_categories           product_categories?      @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   purchase_items               purchase_items[]
+  receipt_items                receipt_items[]
   reservation_items            reservation_items[]
   sale_items                   sale_items[]
 }
@@ -755,18 +758,19 @@ model purchases {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model receipt_expenses {
-  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  receipt_id          String                @db.Uuid
-  etype               receipt_expense_type
-  amount              Decimal               @db.Decimal(14, 2)
-  currency            currency_code
-  rate                Decimal?              @db.Decimal(12, 6)
-  rate_source         rate_source?
-  kgs_amount          Decimal               @db.Decimal(14, 2)
-  alloc_basis         expense_alloc_basis   @default(WEIGHT)
-  is_paid             Boolean               @default(false)
-  expense_allocations expense_allocations[]
-  receipts            receipts              @relation(fields: [receipt_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction)
+  id                                 String                               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  receipt_id                         String                               @db.Uuid
+  etype                              receipt_expense_type
+  amount                             Decimal                              @db.Decimal(14, 2)
+  currency                           currency_code
+  rate                               Decimal?                             @db.Decimal(12, 6)
+  rate_source                        rate_source?
+  kgs_amount                         Decimal                              @db.Decimal(14, 2)
+  alloc_basis                        expense_alloc_basis                  @default(WEIGHT)
+  is_paid                            Boolean                              @default(false)
+  expense_allocations                expense_allocations[]
+  receipt_expense_manual_allocations receipt_expense_manual_allocations[]
+  receipts                           receipts                             @relation(fields: [receipt_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model receipts {
@@ -781,6 +785,7 @@ model receipts {
   discrepancies       discrepancies[]
   lots                lots[]
   receipt_expenses    receipt_expenses[]
+  receipt_items       receipt_items[]
   documents           documents             @relation(fields: [document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   purchases           purchases             @relation(fields: [purchase_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -1171,6 +1176,35 @@ model notifications {
   users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([user_id, dedupe_key])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model receipt_expense_manual_allocations {
+  id               BigInt           @id @default(autoincrement())
+  expense_id       String           @db.Uuid
+  receipt_item_id  String           @db.Uuid
+  amount_kgs       Decimal          @db.Decimal(14, 2)
+  receipt_expenses receipt_expenses @relation(fields: [expense_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  receipt_items    receipt_items    @relation(fields: [receipt_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([expense_id, receipt_item_id], map: "receipt_expense_manual_allocatio_expense_id_receipt_item_id_key")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model receipt_items {
+  id                                 String                               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  receipt_id                         String                               @db.Uuid
+  product_id                         String                               @db.Uuid
+  position                           Int
+  ordered_qty                        Decimal                              @db.Decimal(12, 2)
+  received_qty                       Decimal                              @default(0) @db.Decimal(12, 2)
+  damaged_qty                        Decimal                              @default(0) @db.Decimal(12, 2)
+  receipt_expense_manual_allocations receipt_expense_manual_allocations[]
+  products                           products                             @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  receipts                           receipts                             @relation(fields: [receipt_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([receipt_id, product_id])
+  @@index([receipt_id, position], map: "idx_receipt_items_receipt")
 }
 
 enum account_type {

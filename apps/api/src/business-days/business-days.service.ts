@@ -3,6 +3,7 @@ import { Prisma, business_days, day_status, month_status } from '@prisma/client'
 import { LockedException } from '../common/locked.exception';
 import { PrismaService } from '../prisma/prisma.service';
 import { BusinessDaysRepository } from './business-days.repository';
+import { DayCloseBlocker, DayCloseBlockerRegistry } from './day-close-blockers';
 
 function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -20,7 +21,20 @@ export class BusinessDaysService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly repository: BusinessDaysRepository,
+    private readonly blockers: DayCloseBlockerRegistry,
   ) {}
+
+  /**
+   * What stands between this day and a close.
+   *
+   * The close itself is Priority 2; this is its pre-check, and it exists now
+   * because the work it has to see — a transfer sent and not received
+   * (§12-А.4) — exists now. An empty list is not yet permission to close: the
+   * cashier hand-over check joins it when Day Close is built.
+   */
+  dayCloseBlockers(businessDate: Date): Promise<DayCloseBlocker[]> {
+    return this.blockers.collect(businessDate);
+  }
 
   /**
    * Ensures the day exists and accepts documents.
