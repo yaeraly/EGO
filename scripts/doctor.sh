@@ -16,6 +16,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 PROBLEMS=0
+# Prints a value from the root .env, or nothing; never fails.
+from_env_file() {
+  [ -f "$ROOT/.env" ] || return 0
+  grep -E "^$1=" "$ROOT/.env" | head -1 | cut -d= -f2- || true
+}
 say()  { printf '  %s\n' "$1"; }
 ok()   { printf '\033[32mOK\033[0m   %s\n' "$1"; }
 bad()  { printf '\033[31mКАТА\033[0m %s\n' "$1"; PROBLEMS=$((PROBLEMS + 1)); }
@@ -116,6 +121,30 @@ else
     warn "Миграциялардын абалы окулган жок. Текшериңиз:  npm run db:deploy"
   elif [ "$APPLIED" -lt "$ON_DISK" ]; then
     bad "Миграция колдонулган эмес ($APPLIED / $ON_DISK):  npm run db:deploy"
+    say "Текшерилген база: $(basename "$DB_URL")"
+    # Naming them turns "3 / 6" into something the user can check against the
+    # output of db:deploy — and shows at once if a migration ran but failed.
+    for dir in $(find apps/api/prisma/migrations -mindepth 1 -maxdepth 1 -type d | sort); do
+      NAME="$(basename "$dir")"
+      STATE="$(psql "$DB_URL" -tAc "select case when finished_at is not null then 'ok' when rolled_back_at is not null then 'rolled back' else 'unfinished' end from _prisma_migrations where migration_name = '$NAME'" 2>/dev/null | tr -d ' ')"
+      [ "$STATE" = "ok" ] && continue
+      say "    жетишпейт: $NAME${STATE:+ ($STATE)}"
+      if [ "$STATE" = "unfinished" ]; then
+        # Prisma refuses to deploy anything while a half-applied row stands
+        # (P3009); the row has to be marked one way or the other first.
+        say "      ↑ жарым-жартылай калган — db:deploy P3009 менен токтойт."
+        say "      DDL база да калган болсо:  npx prisma migrate resolve --applied $NAME"
+        say "      калбаса:                   npx prisma migrate resolve --rolled-back $NAME"
+      fi
+    done
+    # Migrations go in through MIGRATION_DATABASE_URL where one exists. If that
+    # names a different database, db:deploy fills one and this checks the other.
+    MIG_URL="${MIGRATION_DATABASE_URL:-$(from_env_file MIGRATION_DATABASE_URL)}"
+    MIG_URL="${MIG_URL%%\?*}"
+    if [ -n "$MIG_URL" ] && [ "$(basename "$MIG_URL")" != "$(basename "$DB_URL")" ]; then
+      bad "MIGRATION_DATABASE_URL башка базаны көрсөтүп турат: $(basename "$MIG_URL")"
+      say ".env ичинде экөө бир базаны көрсөтүшү керек — атын салыштырыңыз."
+    fi
   else
     ok "База ордунда, миграциялар толук ($APPLIED / $ON_DISK)."
   fi
