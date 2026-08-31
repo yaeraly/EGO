@@ -34,6 +34,8 @@ import { IdempotencyModule } from './idempotency/idempotency.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
 import { AdvancesModule } from './advances/advances.module';
+import { HandoversModule } from './handovers/handovers.module';
+import { InventoriesModule } from './inventories/inventories.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { PurchaseViewModule } from './purchase-view/purchase-view.module';
 import { PurchasesModule } from './purchases/purchases.module';
@@ -71,6 +73,8 @@ enableBigIntJson();
     CounterpartiesModule,
     ProductsModule,
     ReservationsModule,
+    InventoriesModule,
+    HandoversModule,
     AdvancesModule,
     PurchasesModule,
     SupplierPaymentsModule,

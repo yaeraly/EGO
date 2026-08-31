@@ -4,11 +4,11 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–6 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–7 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
-reservations and customer advances.
-628 API tests and 11 client tests passing.
+reservations and customer advances; inventory and warehouse handover.
+646 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -62,6 +62,11 @@ reservations and customer advances.
 | 6.4 Expiry, cancellation, fulfilment by sale | done |
 | 6.5 Advance (ADV): taken, applied to a sale, refunded (§17-А) | done |
 | 6.6 Reservation UI: list, create, card with advance and cancel | done |
+| 7.1 Inventory (INV): count sheet, LOT-level adjustment (§22) | done |
+| 7.2 Shortage by named LOT or FIFO; surplus as its own layer | done |
+| 7.3 Full-count schedule and its overdue alert (§22, §39) | done |
+| 7.4 Handover act (HND): system-chosen sample, two signatures (§21) | done |
+| 7.5 UI: the count sheet and the handover act | done |
 
 Module 0 acceptance criteria:
 
@@ -158,8 +163,37 @@ Module 6 acceptance criteria:
 | 9 | §17-А.1–.3: an advance is cash in and a liability, and it settles the sale before credit is weighed | `test/reservations.spec.ts` |
 | 10 | §17-А.4, §35.4: a refund pays the open debt first and only then hands back cash; §35.5 needs a reason for another account; a PIN is always required | `test/reservations.spec.ts` |
 
+Module 7 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §22: a shortage traced to a LOT comes off that LOT at its own landed cost; an untraced one comes off the oldest, FIFO | `test/inventories.spec.ts` |
+| 2 | §22: a surplus becomes its own ADJUSTMENT layer at the value the OWNER states, and the confirm refuses until they state it | `test/inventories.spec.ts` |
+| 3 | §22: only the OWNER confirms an adjustment, and always with a PIN | `test/inventories.spec.ts` |
+| 4 | A count that agrees with the system moves nothing | `test/inventories.spec.ts` |
+| 5 | §42.5: an adjustment the warehouse cannot cover is refused and the document stays a draft | `test/inventories.spec.ts` |
+| 6 | §22, §39: a warehouse past its schedule raises one alert; an unconfigured schedule raises none | `test/inventories.spec.ts` |
+| 7 | §21.1: every A-class product is counted, plus the positions the system picks — never the same product twice | `test/inventories.spec.ts` |
+| 8 | §21.1: responsibility moves only when both people have signed | `test/inventories.spec.ts` |
+| 9 | §21.1: a handover records its difference and corrects no stock — §22 does that | `test/inventories.spec.ts` |
+| 10 | §27.1: neither a confirmed count nor a signed act can be re-typed | `test/inventories.spec.ts` |
+
 ### Open questions
 
+- **The A-class list is expressed as categories** (§21.1). §21.1 leaves the
+  list to the OWNER and names motors, batteries and controllers — which are
+  categories, and Module 5 gave the system categories. So
+  `handover.a_class_category_ids` holds category ids. Unset, only the random
+  sample is counted; say the word if you would rather flag individual
+  products.
+- **A handover corrects nothing.** §21.1 has it record a difference; §22 is
+  what adjusts stock, and only the OWNER may confirm that. So an act that
+  finds two motors missing says so and leaves the books alone until an
+  Inventory Adjustment is made.
+- **The shortage loss is recorded but not yet reported.** §22 puts it in its
+  own line and out of the bonus base; the adjustment writes both figures to
+  the audit log with `in_bonus_base: false`, ready for the P&L and bonus
+  modules that do not exist yet.
 - **An unset reservation policy means "no limit", not a guessed one** (§17.3).
   §17.3 names five parameters and states no numbers — its 20 000 / 20% is
   introduced as an example. So an unset threshold imposes no requirement, an
@@ -305,6 +339,8 @@ apps/api/                 NestJS + Prisma API
     customers/              customers, Walk-in, categories (§11, §12)
     discrepancies/          DIF and its §8.2-8.3 consequence
     documents/              numbering, status machine, posting registry
+    handovers/              HND: the act and its sample (§21)
+    inventories/            INV: count and LOT-level adjustment (§22)
     ledgers/                supplier and cargo ledgers (§4.3, §5.2)
     notifications/          in-app alerts and the daily digest (§39)
     products/               Product Master: card, aliases, search (§12-Б)
@@ -334,7 +370,8 @@ apps/web/                 React 19 + Vite 6 PWA, mobile-first (§1)
                             tills, CEX, alerts, receipt wizard, stock,
                             transfers, discrepancies, claims, the sale
                             screen, checkout, customers, my sales, the
-                            product catalogue and categories, reservations
+                            product catalogue and categories, reservations,
+                            the count sheet and the handover act
   test/                     decimal-string helpers (the only client-side
                             code that looks at money)
 db/egomot_schema.sql      the authoritative data model

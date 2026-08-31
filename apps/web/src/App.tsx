@@ -24,6 +24,9 @@ import { ReceiptWizardPage } from './pages/ReceiptWizardPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { ProductFormPage } from './pages/ProductFormPage';
 import { ProductPage } from './pages/ProductPage';
+import { HandoverPage, HandoversPage } from './pages/HandoversPage';
+import { InventoriesPage } from './pages/InventoriesPage';
+import { InventoryPage } from './pages/InventoryPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ReservationPage } from './pages/ReservationPage';
 import {
@@ -79,6 +82,10 @@ function Router() {
         <Route path="/reservations" element={<ReservationsPage />} />
         <Route path="/reservations/new" element={<ReservationFormPage />} />
         <Route path="/reservations/:id" element={<ReservationPage />} />
+        <Route path="/inventories" element={<InventoriesPage />} />
+        <Route path="/inventories/:id" element={<InventoryPage />} />
+        <Route path="/handovers" element={<HandoversPage />} />
+        <Route path="/handovers/:id" element={<HandoverPage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/products/:id" element={<ProductStockPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />

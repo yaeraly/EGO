@@ -24,6 +24,8 @@ const ENTRIES: Entry[] = [
   { to: '/claims', icon: '📮', label: 'Талаптар', hint: 'CLM — жоготуу үчүн талап (§8.5)', ownerOnly: true },
   { to: '/reservations', icon: '📌', label: 'Броньдор', hint: 'Товарды кармоо, аванс, мөөнөт (§17, §17-А)' },
   { to: '/products', icon: '🔧', label: 'Товар каталогу', hint: 'Товар карточкасы, категория, издөө (§12-Б)' },
+  { to: '/inventories', icon: '📋', label: 'Инвентаризация', hint: 'Саноо жана складдык корректировка (§22)' },
+  { to: '/handovers', icon: '🤝', label: 'Жоопкерчиликти өткөрүү', hint: 'Сатуучулар ортосундагы акт (§21)' },
   { to: '/warehouses', icon: '🏗️', label: 'Складдар', hint: 'MAIN, DEFECT жана башкалар (§12-А)' },
 ];
 

@@ -84,6 +84,18 @@ export const SettingKey = {
    */
   RESERVATION_CANCELLATION_FEE_PCT: 'reservation.cancellation_fee_pct',
 
+
+  /**
+   * Inventory and warehouse handover (§21, §22).
+   *
+   * §22 puts the full-count schedule in the OWNER's settings and asks for at
+   * least one a month; §21.1 leaves the A-class list to the OWNER, and the
+   * categories of Module 5 are how that list is expressed here.
+   */
+  INVENTORY_FULL_COUNT_EVERY_DAYS: 'inventory.full_count_every_days',
+  HANDOVER_A_CLASS_CATEGORIES: 'handover.a_class_category_ids',
+  HANDOVER_RANDOM_POSITIONS: 'handover.random_positions',
+
   /** Days before a debt falls due to warn the salesperson and OWNER (§16). */
   DEBT_DUE_WARNING_DAYS: 'debt.due_warning_days',
 } as const;
@@ -211,6 +223,24 @@ export const SEEDED_SETTINGS: SeededSetting[] = [
     value: null,
     description:
       'Percent of the advance withheld on cancellation (§17.2). UNCONFIGURED — the MVP default: the advance is refunded in full.',
+  },
+  {
+    key: SettingKey.INVENTORY_FULL_COUNT_EVERY_DAYS,
+    value: 30,
+    description:
+      'Days between full inventories (§22: "кеминде айына 1 жолу", the schedule being the OWNER\'s). An alert is raised once a warehouse has gone longer.',
+  },
+  {
+    key: SettingKey.HANDOVER_A_CLASS_CATEGORIES,
+    value: null,
+    description:
+      'Category ids whose products are counted in full at every handover (§21.1: "мотор, батарея, контроллер ж.б. — тизмени OWNER аныктайт"). UNCONFIGURED — only the random sample is counted.',
+  },
+  {
+    key: SettingKey.HANDOVER_RANDOM_POSITIONS,
+    value: 12,
+    description:
+      'How many further positions the system picks at random for a handover (§21.1: "рандом тандалган 10–15 позиция").',
   },
   {
     key: SettingKey.DEBT_DUE_WARNING_DAYS,

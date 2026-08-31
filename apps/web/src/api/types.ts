@@ -709,3 +709,61 @@ export interface Reservation {
     line_total: string;
   }[];
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Module 7 — inventory (INV) and warehouse handover (HND), §21 and §22
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface InventoryLine {
+  id: string;
+  product_id: string;
+  sku: string;
+  name: string;
+  system_qty: string;
+  actual_qty: string;
+  diff_qty: string;
+  layer_id: string | null;
+  responsible: string | null;
+}
+
+export interface Inventory {
+  document: {
+    id: string;
+    doc_number: string;
+    status: string;
+    business_date: string;
+    comment: string | null;
+  };
+  warehouse: { id: string; code: string; name: string };
+  is_full: boolean;
+  lines: InventoryLine[];
+  counted_lines: number;
+  total_lines: number;
+  shortage_lines: number;
+  excess_lines: number;
+}
+
+export interface HandoverItem {
+  id: string;
+  product_id: string;
+  /** Counted at every handover, whatever the sample says (§21.1). */
+  is_a_class: boolean;
+  system_qty: string;
+  actual_qty: string;
+}
+
+export interface Handover {
+  document_id: string;
+  from_user: string;
+  to_user: string;
+  total_value: string | null;
+  difference: string;
+  from_confirmed_at: string | null;
+  to_confirmed_at: string | null;
+  handover_checked_items: HandoverItem[];
+  documents: {
+    doc_number: string;
+    status: string;
+    business_date: string;
+  };
+}

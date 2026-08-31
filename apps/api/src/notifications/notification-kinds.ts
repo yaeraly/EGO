@@ -1,12 +1,11 @@
 /**
  * Alert kinds this module raises (§39).
  *
- * §39 lists thirteen alerts across the whole system; the three here are the
- * ones Module 2 can actually observe. The rest depend on modules that do not
- * exist yet (customer debt, stock minimums, Claim, reservations, inventory,
- * cash counts, plan, backup) and are deliberately not stubbed — an alert that
- * never fires is worse than one that is not there, because it reads as
- * covered.
+ * §39 lists thirteen alerts across the whole system; the ones here are those
+ * the modules that exist can actually observe. The rest wait on modules that
+ * do not (stock minimums, Claim, cash counts, plan, backup) and are
+ * deliberately not stubbed — an alert that never fires is worse than one that
+ * is not there, because it reads as covered.
  */
 export const NotificationKind = {
   /** A supplier is owed money (§4.3, §39). */
@@ -23,6 +22,9 @@ export const NotificationKind = {
 
   /** A debt falls due within the warning window (§16). */
   CUSTOMER_DEBT_DUE_SOON: 'CUSTOMER_DEBT_DUE_SOON',
+
+  /** A warehouse has gone longer than the schedule without a full count (§22, §39). */
+  INVENTORY_OVERDUE: 'INVENTORY_OVERDUE',
 } as const;
 
 export type NotificationKindName =

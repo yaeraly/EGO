@@ -5,6 +5,7 @@ import { AccountsService } from '../accounts/accounts.service';
 import { BUSINESS_TIMEZONE, bishkekDateKey } from '../documents/document-number';
 import { CargoLedgerService, SupplierLedgerService } from '../ledgers/ledgers.service';
 import { SettingKey } from '../settings/setting-keys';
+import { InventoriesService } from '../inventories/inventories.service';
 import { SettingsService } from '../settings/settings.service';
 import { NotificationKind } from './notification-kinds';
 import { NotificationsService } from './notifications.service';
@@ -22,6 +23,8 @@ export interface DigestResult {
   date: string;
   supplier_debt: { raised: boolean; suppliers: number; total_cny: string };
   cargo_debt: { raised: boolean; companies: number; total_usd: string };
+  /** Warehouses §22's schedule says are due a full count. */
+  inventory_overdue: { raised: boolean; warehouses: number };
   low_balance: {
     account_id: string;
     name: string;
@@ -50,6 +53,7 @@ export class AlertsService {
     private readonly cargoLedger: CargoLedgerService,
     private readonly accounts: AccountsService,
     private readonly settings: SettingsService,
+    private readonly inventories: InventoriesService,
   ) {}
 
   /**
@@ -80,6 +84,7 @@ export class AlertsService {
       date,
       supplier_debt: await this.supplierDebtDigest(date),
       cargo_debt: await this.cargoDebtDigest(date),
+      inventory_overdue: await this.inventoryOverdue(date),
       low_balance: await this.lowCurrencyBalances(date),
     };
   }
@@ -170,6 +175,60 @@ export class AlertsService {
    * seeded null on purpose, and inventing a default would either spam the
    * OWNER or, worse, stay quiet when they thought they had a warning.
    */
+  /**
+   * Full counts that are overdue (§22, §39).
+   *
+   * §22 asks for at least one a month and leaves the schedule to the OWNER,
+   * so the alert reads the configured interval rather than assuming a month.
+   * A warehouse that has never been counted is overdue by definition — that
+   * is the case worth saying out loud.
+   */
+  private async inventoryOverdue(
+    date: string,
+  ): Promise<DigestResult['inventory_overdue']> {
+    const everyDays = await this.settings.optionalDecimal(
+      SettingKey.INVENTORY_FULL_COUNT_EVERY_DAYS,
+    );
+    if (everyDays === null || everyDays.lessThanOrEqualTo(0)) {
+      return { raised: false, warehouses: 0 };
+    }
+
+    const due = await this.inventories.overdueWarehouses(
+      new Date(),
+      everyDays.toNumber(),
+    );
+    if (due.length === 0) {
+      return { raised: false, warehouses: 0 };
+    }
+
+    const raised = await this.notifications.notifyOwners({
+      kind: NotificationKind.INVENTORY_OVERDUE,
+      title: `Инвентаризация мөөнөтү өттү: ${due.length} склад`,
+      body: due
+        .map(
+          (row) =>
+            `${row.code}: ${
+              row.lastCount
+                ? `акыркысы ${row.lastCount.toISOString().slice(0, 10)}`
+                : 'эч качан саналган эмес'
+            }`,
+        )
+        .join('\n'),
+      payload: {
+        date,
+        every_days: everyDays.toNumber(),
+        warehouses: due.map((row) => ({
+          warehouse_id: row.warehouseId,
+          code: row.code,
+          last_count: row.lastCount?.toISOString().slice(0, 10) ?? null,
+        })),
+      },
+      dedupeKey: `${NotificationKind.INVENTORY_OVERDUE}:${date}`,
+    });
+
+    return { raised: raised > 0, warehouses: due.length };
+  }
+
   private async lowCurrencyBalances(
     date: string,
   ): Promise<DigestResult['low_balance']> {
