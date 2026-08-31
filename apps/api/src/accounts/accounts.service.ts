@@ -176,6 +176,20 @@ export class AccountsService {
   }
 
   /**
+   * The balance right now, inside a transaction already under way.
+   *
+   * For a caller posting several movements to the same account in one go: the
+   * earlier ones are already in the table, and the overdraft check has to see
+   * them. The caller must already hold the account lock.
+   */
+  balanceOf(
+    tx: Prisma.TransactionClient,
+    accountId: string,
+  ): Promise<Prisma.Decimal> {
+    return this.repository.balanceInTransaction(tx, accountId);
+  }
+
+  /**
    * Locks several accounts in a fixed order.
    *
    * Two transfers moving money in opposite directions between the same pair of

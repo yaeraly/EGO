@@ -965,3 +965,50 @@ export interface BonusStanding {
   calculated: string;
   payable: string;
 }
+
+/** A document header, as the correction screens need it. */
+export interface CorrectionDocument {
+  id: string;
+  doc_type: string;
+  doc_number: string;
+  business_date: string;
+  status: string;
+  created_at: string;
+  comment: string | null;
+}
+
+/** Correction / Reversal (COR) — §27.1, Period Lock. */
+export interface CorrectionRow {
+  document_id: string;
+  original_document_id: string;
+  correction_type: 'REVERSAL';
+  reason: string;
+  effective_date: string;
+  old_value: {
+    doc_number?: string;
+    doc_type?: string;
+    business_date?: string;
+    account_movements?: { account: string; amount: string }[];
+    balances?: Record<string, string>;
+  };
+  new_value: {
+    reversed_by?: string;
+    account_movements?: { account: string; amount: string }[];
+    balances?: Record<string, string>;
+  };
+  document: CorrectionDocument;
+  original: CorrectionDocument;
+}
+
+/** A document the correction screen offers, with what it moved. */
+export interface CorrectableDocument {
+  document: CorrectionDocument;
+  amount: string;
+}
+
+/** Whether a document can be corrected, and what to do instead if not. */
+export interface CorrectionEligibility {
+  correctable: boolean;
+  reason: string | null;
+  document: CorrectionDocument;
+}

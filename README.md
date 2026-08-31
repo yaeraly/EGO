@@ -4,13 +4,13 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–12 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–13 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
 returns; defect acts, write-offs and scrap income; operating expenses;
-salaries; the seller's bonus.
-703 API tests and 11 client tests passing.
+salaries; the seller's bonus; correction and reversal.
+724 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -91,6 +91,10 @@ salaries; the seller's bonus.
 | 12.2 Payable once that sale's own money arrives (§23.2) | done |
 | 12.3 Paying it (BON); a return reverses or adjusts it (§23.3–23.4) | done |
 | 12.4 UI: what each seller has earned, and the payment | done |
+| 13.1 Correction/Reversal (COR): the record §27.1 asks for | done |
+| 13.2 Reversing a document's money movements, guarded | done |
+| 13.3 The one document a closed period accepts (Period Lock) | done |
+| 13.4 UI: pick the document, state the reason, the OWNER's PIN | done |
 
 Module 0 acceptance criteria:
 
@@ -278,6 +282,25 @@ Module 12 acceptance criteria:
 | 11 | §3.1.5: BON is an operating flow, like the salary it accompanies | `test/bonuses.spec.ts` |
 | 12 | §23.5: a later exchange-rate move leaves a recorded bonus alone | `test/bonuses.spec.ts` |
 
+Module 13 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §27.1: a confirmed document is reversed by a COR, never edited — the original keeps its status, its movements and its place in history | `test/corrections.spec.ts` |
+| 2 | §42.3: the reversal is the correction's own movements, the exact inverse of the original's | `test/corrections.spec.ts` |
+| 3 | Both sides of a two-account document come back (§19) | `test/corrections.spec.ts` |
+| 4 | §42.5: a reversal the till can no longer afford is refused and the correction stays a draft | `test/corrections.spec.ts` |
+| 5 | §27.1, §35: a sale is sent to the return process by name, not half-reversed | `test/corrections.spec.ts` |
+| 6 | A document that moved stock, or built a currency rate layer, is refused with the reason | `test/corrections.spec.ts` |
+| 7 | A draft needs no correction, and no document is corrected twice | `test/corrections.spec.ts` |
+| 8 | §2, §27.1: raising one and confirming one are both the OWNER's, and always take a PIN — the generic confirm endpoint is not a way around it | `test/corrections.spec.ts` |
+| 9 | §27.1: the reason is mandatory and cannot be a shrug | `test/corrections.spec.ts` |
+| 10 | Period Lock: the record carries the original, the reason, the old and the new value, and the balances either side | `test/corrections.spec.ts` |
+| 11 | §27: an append-only audit entry accompanies every posted correction | `test/corrections.spec.ts` |
+| 12 | Period Lock: a closed day and a closed month both refuse every document except this one | `test/corrections.spec.ts` |
+| 13 | Period Lock: the period it belongs to and the moment it was entered are kept apart (31 Aug closed, error found 2 Sep) | `test/corrections.spec.ts` |
+| 14 | §28: a correction takes the Cash Flow category of the document it reverses, never one of its own | `test/corrections.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -292,6 +315,45 @@ Module 12 acceptance criteria:
   inside SLR would pay it twice. The bonus screen shows what is payable per
   employee; the OWNER decides whether to hand it over as BON or to carry it
   into that month's salary.
+- **A correction reverses money, and only money — for now.** §27.1 says a
+  confirmed document is fixed by a COR, and the Period Lock section lists what
+  the record must carry, but neither states what a reversal does to a FIFO
+  layer. §18.0 and §42.19 give that rule for a *return* — the goods come back
+  as a new layer at the original cost with today's date — and a reversal is
+  not a return. So a document that moved stock, or that built or consumed a
+  currency rate layer (§10-А), is refused by name with the reason, rather than
+  half-reversed. What is reversible today: CAP, WDW, TRN, EXP, SLR, OIN in
+  som. Tell me which rule a stock reversal should follow — the exact layers
+  back, or a new layer as in §18.0 — and receipts, transfers and write-offs
+  can follow.
+- **A sale is corrected by a return, as §27.1 says.** §27.1 offers two routes
+  for a sale — "Return (RET) же ошол эле күнү Correction/Reversal (COR)" — and
+  the return is the one whose mechanics the knowledge base states in full
+  (§35, §18.0, §42.19). Same-day COR on a sale would additionally have to undo
+  the payment allocation, the customer's debt and the bonus; each of those is
+  defined for a return and undefined for a reversal. The screen says so and
+  points at the return.
+- **Only a full reversal, no partial value correction.** The `corrections`
+  table carries `correction_type` with old and new value, and a reversal is
+  the one correction whose effect the system can derive exactly — from the
+  movements the original made. "The amount should have been 11 000, not
+  12 000" would need a rule for how the corrected value is re-posted; the
+  practice today is to reverse and re-enter, which leaves both documents in
+  history. Say the word if you want an in-place value correction and what it
+  should do.
+- **The effective date defaults to the original's period, not today.** Period
+  Lock's own example — 31 August closed, the error found on 2 September —
+  keeps Business/Effective Date (which period the operation belongs to) apart
+  from Created Date/Time (when it was really entered). The correction is
+  therefore booked to August and its `created_at` says September. The OWNER
+  can name a different period on the screen.
+- **The closed period accepts exactly one document type.** Period Lock says a
+  closed day or month is fixed "Correction/Reversal (COR) документи аркылуу
+  гана", so the COR itself has to be allowed in. Nothing else is: the same
+  business date refuses an ordinary expense with 423. What keeps that honest
+  is the OWNER's PIN, the mandatory reason and the audit entry — the three
+  things Closed Period Correction asks for. Period Reopen (a closed month
+  reopened with a reason) is a separate process and is not built yet.
 - **An unconfigured bonus rate is zero, not an error.** §23 states the
   formula and leaves the rate to the OWNER. With neither a personal rate nor
   the `BONUS_DEFAULT_RATE_PCT` setting, the rate is 0 and the bonus is 0 — a

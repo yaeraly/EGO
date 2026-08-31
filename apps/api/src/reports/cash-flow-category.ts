@@ -39,10 +39,28 @@ const CATEGORIES: Partial<Record<doc_type, CashFlowCategory>> = {
   // §23 — a bonus is pay, and pay is operating.
   [doc_type.BON]: CashFlowCategory.OPERATING,
   [doc_type.CEX]: CashFlowCategory.INTERNAL_TRANSFER,
+  // COR is deliberately absent: a correction has no category of its own. It
+  // takes the category of the document it reverses — putting an expense back
+  // is an operating inflow, undoing a capital injection is a financing
+  // outflow. `correctionCashFlowCategory` is how that is asked.
 };
 
 export function cashFlowCategory(docType: doc_type): CashFlowCategory | null {
   return CATEGORIES[docType] ?? null;
+}
+
+/**
+ * Where a Correction/Reversal belongs in the Cash Flow (§27.1, §28).
+ *
+ * The same place as the document it reverses, with the opposite sign — which
+ * the movements already carry. Classifying COR as one fixed category would
+ * misstate the statement every time it corrected a different kind of
+ * document.
+ */
+export function correctionCashFlowCategory(
+  originalDocType: doc_type,
+): CashFlowCategory | null {
+  return cashFlowCategory(originalDocType);
 }
 
 /** True for the equity movements §3.1.6 forbids booking as expenses. */

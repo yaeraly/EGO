@@ -21,6 +21,14 @@ export interface CreateDocumentParams {
   businessDate: Date;
   userId: string;
   comment?: string | null;
+  /**
+   * Books the document into a closed day or month.
+   *
+   * Only the Correction/Reversal document may set this: Period Lock makes COR
+   * the single way an error in a closed period is fixed, so the COR has to be
+   * able to land there. Every other type is refused by `ensureOpen`.
+   */
+  allowClosedPeriod?: boolean;
 }
 
 @Injectable()
@@ -66,8 +74,14 @@ export class DocumentsService {
     params: CreateDocumentParams,
   ): Promise<documents> {
     // Period Lock first: a closed day must refuse the document before a
-    // sequence number is spent on it.
-    await this.businessDays.ensureOpen(tx, params.businessDate);
+    // sequence number is spent on it. A correction is the documented
+    // exception and still takes the day row, so a Day Close cannot seal
+    // underneath it.
+    if (params.allowClosedPeriod) {
+      await this.businessDays.ensureExists(tx, params.businessDate);
+    } else {
+      await this.businessDays.ensureOpen(tx, params.businessDate);
+    }
 
     // The Numbering Standard counts by creation year (Bishkek), which is not
     // necessarily the business date's year.

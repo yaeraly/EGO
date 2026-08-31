@@ -44,11 +44,13 @@ describe('Document status machine (Module 0.3, criterion 2)', () => {
    *
    * These tests are about the status machine itself, so the type must be one
    * confirming does nothing else for: a SAL, say, now runs the sale poster and
-   * would rightly refuse a header with no sale behind it.
+   * would rightly refuse a header with no sale behind it. LOT is such a type —
+   * a receipt raises it as part of its own posting (§18.1), so it has no
+   * poster of its own. (COR served this purpose until §27.1 gave it one.)
    */
   async function newDraft(): Promise<{ id: string; doc_number: string }> {
     const { body } = await auth(http().post('/api/documents'))
-      .send({ doc_type: 'COR', business_date: '2026-03-15' })
+      .send({ doc_type: 'LOT', business_date: '2026-03-15' })
       .expect(201);
     expect(body.status).toBe(doc_status.DRAFT);
     return body;

@@ -32,6 +32,7 @@ const ENTRIES: Entry[] = [
   { to: '/write-offs', icon: '🗑️', label: 'Списание', hint: 'Брактан металл кирешеси (§38)', ownerOnly: true },
   { to: '/inventories', icon: '📋', label: 'Инвентаризация', hint: 'Саноо жана складдык корректировка (§22)' },
   { to: '/handovers', icon: '🤝', label: 'Жоопкерчиликти өткөрүү', hint: 'Сатуучулар ортосундагы акт (§21)' },
+  { to: '/corrections', icon: '🩹', label: 'Коррекция', hint: 'Тастыкталган документтин катасын оңдоо (§27.1)', ownerOnly: true },
   { to: '/warehouses', icon: '🏗️', label: 'Складдар', hint: 'MAIN, DEFECT жана башкалар (§12-А)' },
 ];
 

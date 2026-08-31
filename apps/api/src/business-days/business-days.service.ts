@@ -68,6 +68,23 @@ export class BusinessDaysService {
   }
 
   /**
+   * Opens the day row without asking whether the period accepts documents.
+   *
+   * The one document type that is allowed into a closed period is the
+   * Correction/Reversal — Period Lock says an error in a closed day or month
+   * is fixed "Correction/Reversal (COR) документи аркылуу гана", which is only
+   * possible if the COR itself may be booked there. The gate that keeps this
+   * honest is on the COR: the OWNER's PIN, a mandatory reason and a full audit
+   * entry (Closed Period Correction). Nothing else may call this.
+   */
+  ensureExists(
+    tx: Prisma.TransactionClient,
+    businessDate: Date,
+  ): Promise<business_days> {
+    return this.repository.openAndShareLock(tx, businessDate);
+  }
+
+  /**
    * A closed month seals every day in it.
    *
    * The specification scopes 0.6 to business_days; this check is included
