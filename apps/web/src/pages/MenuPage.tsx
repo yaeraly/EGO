@@ -13,6 +13,7 @@ interface Entry {
 /** Everything the bottom bar has no room for. */
 const ENTRIES: Entry[] = [
   { to: '/reports', icon: '📊', label: 'Отчеттор', hint: 'ОПУ, ДДС жана Баланс (§28)', ownerOnly: true },
+  { to: '/health', icon: '🩺', label: 'Эмне кылуу керек', hint: 'Күнүмдүк маанилүү иштердин тизмеси (§34)', ownerOnly: true },
   { to: '/dashboard', icon: '🧭', label: 'Кыскача абал', hint: 'Бүгүнкү жана айлык абал бир экранда (§32)', ownerOnly: true },
   { to: '/performance', icon: '🏆', label: 'Сатуучулар жана кардарлар', hint: 'План, KPI, рейтинг (§24, §30, §31)', ownerOnly: true },
   { to: '/analytics', icon: '📈', label: 'Аналитика', hint: 'ABC, XYZ, маржа, заказ тизмеси (§29)', ownerOnly: true },

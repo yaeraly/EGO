@@ -124,6 +124,18 @@ export const SettingKey = {
   PURCHASE_COVER_DAYS: 'purchase.cover_days',
   /** Used only until a first delivery has been received and timed (§6). */
   PURCHASE_FALLBACK_LEAD_DAYS: 'purchase.fallback_lead_days',
+
+  /**
+   * The business health board (§34).
+   *
+   * §34 lists what the OWNER should be shown and gives no thresholds. These
+   * decide when stock counts as standing still, when an open claim has stood
+   * long enough to chase, and how much idle stock is worth raising a voice
+   * about.
+   */
+  HEALTH_DEAD_STOCK_DAYS: 'health.dead_stock_days',
+  HEALTH_CLAIM_STALE_DAYS: 'health.claim_stale_days',
+  HEALTH_DEAD_STOCK_URGENT_KGS: 'health.dead_stock_urgent_kgs',
 } as const;
 
 export type SettingKeyName = (typeof SettingKey)[keyof typeof SettingKey];
@@ -315,5 +327,23 @@ export const SEEDED_SETTINGS: SeededSetting[] = [
     value: null,
     description:
       'Delivery time in days, used only until a first batch has been received and timed (§6, §33). UNCONFIGURED — until then the assistant says the lead time is unknown rather than guessing one.',
+  },
+  {
+    key: SettingKey.HEALTH_DEAD_STOCK_DAYS,
+    value: 90,
+    description:
+      'Days without a sale after which stock counts as standing still (§34). §34 states no figure.',
+  },
+  {
+    key: SettingKey.HEALTH_CLAIM_STALE_DAYS,
+    value: 30,
+    description:
+      'Days an open claim may stand before the board asks for it to be chased (§8.5, §34); twice this and it is urgent.',
+  },
+  {
+    key: SettingKey.HEALTH_DEAD_STOCK_URGENT_KGS,
+    value: 50000,
+    description:
+      'Idle stock worth this much or more is raised as a warning rather than a note (§34). §34 states no figure.',
   },
 ];

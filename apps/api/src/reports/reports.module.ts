@@ -8,6 +8,8 @@ import { AnalyticsService } from './analytics.service';
 import { PerformanceRepository } from './performance.repository';
 import { PerformanceService } from './performance.service';
 import { DashboardService } from './dashboard.service';
+import { HealthRepository } from './health.repository';
+import { HealthService } from './health.service';
 import { PurchaseAdviceRepository } from './purchase-advice.repository';
 import { PurchaseAdviceService } from './purchase-advice.service';
 import { ReportsController } from './reports.controller';
@@ -27,6 +29,8 @@ import { ReportsService } from './reports.service';
     DashboardService,
     PurchaseAdviceService,
     PurchaseAdviceRepository,
+    HealthService,
+    HealthRepository,
   ],
   exports: [
     ReportsService,
@@ -34,6 +38,7 @@ import { ReportsService } from './reports.service';
     PerformanceService,
     DashboardService,
     PurchaseAdviceService,
+    HealthService,
   ],
 })
 export class ReportsModule {}

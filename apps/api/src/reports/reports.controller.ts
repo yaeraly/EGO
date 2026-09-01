@@ -12,6 +12,7 @@ import {
   SalesTrendReport,
 } from './analytics.service';
 import { Dashboard, DashboardService } from './dashboard.service';
+import { HealthReport, HealthService } from './health.service';
 import {
   PurchaseAdviceReport,
   PurchaseAdviceService,
@@ -56,6 +57,7 @@ export class ReportsController {
     private readonly performance: PerformanceService,
     private readonly dashboard: DashboardService,
     private readonly advice: PurchaseAdviceService,
+    private readonly health: HealthService,
   ) {}
 
   /**
@@ -67,6 +69,17 @@ export class ReportsController {
   @Get('dashboard')
   dashboardView(): Promise<Dashboard> {
     return this.dashboard.load();
+  }
+
+  /**
+   * What to do about it (§34).
+   *
+   * The dashboard says how the business stands; this says what stands in
+   * need of attention, and where to go and see to it.
+   */
+  @Get('health')
+  healthView(): Promise<HealthReport> {
+    return this.health.load();
   }
 
   /** ДДС — Cash Flow. */

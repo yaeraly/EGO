@@ -56,6 +56,13 @@ export function DashboardPage() {
             </div>
           </div>
 
+          <Link className="card card-link" to="/health">
+            <div className="row">
+              <strong>🩺 Эмне кылуу керек</strong>
+              <span className="muted">күнүмдүк тизме (§34)</span>
+            </div>
+          </Link>
+
           <Link className="card card-link" to="/accounts">
             <div className="row">
               <strong>💰 Касса жана банк</strong>

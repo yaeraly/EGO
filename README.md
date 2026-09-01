@@ -4,7 +4,7 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–19 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–20 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
@@ -13,8 +13,8 @@ salaries; the seller's bonus; correction and reversal; the daily cash
 handover, Day Close and the Period Lock; the three financial statements;
 ABC, XYZ, margin and what needs ordering; plans, KPI and the reports by
 salesperson and by customer; the OWNER's dashboard; the purchasing
-assistant.
-828 API tests and 11 client tests passing.
+assistant; the business health board.
+842 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -120,6 +120,8 @@ assistant.
 | 19.1 What to order and how much, from measured figures (§33) | done |
 | 19.2 Priority, estimated cost and what the yuan till holds (§33) | done |
 | 19.3 UI: change the suggestion and turn it into an order (§33) | done |
+| 20.1 The daily list of what needs doing (§34) | done |
+| 20.2 UI: the board, ordered by how pressing each item is | done |
 
 Module 0 acceptance criteria:
 
@@ -439,6 +441,24 @@ Module 19 acceptance criteria:
 | 14 | §29: the ABC and XYZ classes travel onto the line | `test/purchase-advice.spec.ts` |
 | 15 | §2: the assistant is the OWNER's | `test/purchase-advice.spec.ts` |
 
+Module 20 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §34: how far through the month the business is — what "behind" is measured against | `test/health.spec.ts` |
+| 2 | §24: a salesperson is behind only once the month has run further than their sales; no plan means no verdict, and neither does the first week | `test/health.spec.ts` |
+| 3 | §8.5: an open claim grows louder the longer it stands | `test/health.spec.ts` |
+| 4 | §34: idle stock is measured in money, not in pieces | `test/health.spec.ts` |
+| 5 | A business with nothing wrong is told so, rather than shown filler | `test/health.spec.ts` |
+| 6 | §16.4: the late debts are named, with who owes them | `test/health.spec.ts` |
+| 7 | §34: stock that has stopped moving is named with what it is worth; stock still moving is left alone | `test/health.spec.ts` |
+| 8 | §8.5: a claim that has stood two months asks to be chased | `test/health.spec.ts` |
+| 9 | §24, §34: who is behind their plan, and by how many points | `test/health.spec.ts` |
+| 10 | §20: a cash count that did not match is raised, with whose and when | `test/health.spec.ts` |
+| 11 | §27, §42.3: a balance that does not hold is the most pressing thing on the board | `test/health.spec.ts` |
+| 12 | Most pressing first, each counted, and every item says where to go | `test/health.spec.ts` |
+| 13 | §2, §34: the board is the OWNER's | `test/health.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -453,6 +473,22 @@ Module 19 acceptance criteria:
   inside SLR would pay it twice. The bonus screen shows what is payable per
   employee; the OWNER decides whether to hand it over as BON or to carry it
   into that month's salary.
+- **The health board reads on demand; §39's alerts push.** §34 asks for a
+  daily list of what needs attention and §39 for automatic warnings. They
+  overlap in subject and differ in kind, so the board raises no notifications:
+  two systems saying the same sentence would teach the OWNER to ignore both.
+  The board is the fuller picture — it also carries idle stock, plan pace and
+  the balance check, which §39 does not list.
+- **"Behind plan" is measured against elapsed time.** §34 asks which
+  salesperson has fallen behind and does not say behind what pace. A monthly
+  target implies the month's own pace, so a seller at 30% on the fifteenth is
+  twenty points behind. Nobody is judged in the first fifth of the month —
+  saying so on the second morning would teach the OWNER to skip the board.
+- **When stock counts as standing still, and when a claim is stale, are
+  yours.** §34 names both and gives no figures. `health.dead_stock_days` is
+  seeded at 90, `health.claim_stale_days` at 30 (twice that and it is
+  urgent), and `health.dead_stock_urgent_kgs` at 50 000 — the point where
+  idle stock is worth raising a voice about rather than noting.
 - **The assistant suggests; it does not forecast.** §33 lists seasonality
   among its inputs, and seasonality needs years of history and a stated
   method. With months of trading, a seasonal factor would be noise dressed up

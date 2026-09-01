@@ -1434,3 +1434,22 @@ export interface PurchaseAdviceReport {
   order: ProductAdvice[];
   hold: ProductAdvice[];
 }
+
+/** One thing the OWNER should do something about (§34). */
+export interface HealthItem {
+  kind: string;
+  severity: 'URGENT' | 'WARNING' | 'INFO';
+  title: string;
+  detail: string;
+  link: string;
+  amount: string | null;
+  currency: string | null;
+  count: number;
+}
+
+export interface HealthReport {
+  as_of: string;
+  month_progress_pct: string;
+  counts: { urgent: number; warning: number; info: number };
+  items: HealthItem[];
+}

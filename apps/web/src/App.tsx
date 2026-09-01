@@ -9,6 +9,7 @@ import { CorrectionsPage } from './pages/CorrectionsPage';
 import { DayClosePage } from './pages/DayClosePage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { HealthPage } from './pages/HealthPage';
 import { PerformancePage } from './pages/PerformancePage';
 import { PurchaseAdvicePage } from './pages/PurchaseAdvicePage';
 import { ReportsPage } from './pages/ReportsPage';
@@ -114,6 +115,7 @@ function Router() {
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/health" element={<HealthPage />} />
         <Route path="/performance" element={<PerformancePage />} />
         <Route path="/purchase-advice" element={<PurchaseAdvicePage />} />
         <Route path="/stock" element={<StockPage />} />
