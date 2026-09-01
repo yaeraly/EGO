@@ -1331,3 +1331,63 @@ export interface CustomerReport {
     last_purchase: string;
   }[];
 }
+
+/** The OWNER's one screen (§32). */
+export interface Dashboard {
+  as_of: string;
+  today: { sales: number; revenue: string; profit: string };
+  month: { sales: number; revenue: string; profit: string };
+  cash: {
+    total_kgs: string;
+    by_currency: { currency: string; amount: string; kgs: string }[];
+    with_sellers_kgs: string;
+  };
+  customers: {
+    receivables: string;
+    overdue: string;
+    overdue_count: number;
+    advances: string;
+  };
+  suppliers: {
+    payable_cny: string;
+    payable_kgs: string;
+    cargo_payable_usd: string;
+    cargo_payable_kgs: string;
+    open_claims: string;
+    open_claims_count: number;
+  };
+  stock: {
+    qty: string;
+    value_kgs: string;
+    main_value_kgs: string;
+    defect_value_kgs: string;
+    low_count: number;
+    low: {
+      product_id: string;
+      name: string;
+      available: string;
+      inbound: string;
+    }[];
+  };
+  top_selling: {
+    product_id: string;
+    name: string;
+    qty: string;
+    revenue: string;
+  }[];
+  most_profitable: {
+    product_id: string;
+    name: string;
+    margin: string;
+    margin_pct: string | null;
+  }[];
+  sellers: {
+    user_id: string;
+    full_name: string;
+    revenue: string;
+    margin: string;
+    sales: number;
+    plan_pct: string | null;
+  }[];
+  business_plan_pct: string | null;
+}

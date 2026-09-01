@@ -83,17 +83,31 @@ export class PerformanceRepository {
     `;
   }
 
-  /** A salesperson's own tills and bank accounts, right now (§19, §31). */
+  /**
+   * Every account belonging to a person, and their balance now (§19, §31).
+   *
+   * The role travels with the row because "the money still with the
+   * salespeople" (§32) is not the same set as "everyone's own accounts" — the
+   * OWNER's till is theirs already.
+   */
   sellerAccounts(): Promise<
-    { user_id: string; name: string; currency: string; balance: Prisma.Decimal }[]
+    {
+      user_id: string;
+      role: string;
+      name: string;
+      currency: string;
+      balance: Prisma.Decimal;
+    }[]
   > {
     return this.prisma.$queryRaw`
-      SELECT a.owner_user AS user_id, a.name, a.currency::text AS currency,
+      SELECT a.owner_user AS user_id, u.role::text AS role,
+             a.name, a.currency::text AS currency,
              COALESCE(SUM(m.amount), 0) AS balance
       FROM payment_accounts a
+      JOIN users u ON u.id = a.owner_user
       LEFT JOIN account_movements m ON m.account_id = a.id
-      WHERE a.owner_user IS NOT NULL AND a.is_active
-      GROUP BY a.owner_user, a.name, a.currency
+      WHERE a.is_active
+      GROUP BY a.owner_user, u.role, a.name, a.currency
       ORDER BY a.name
     `;
   }

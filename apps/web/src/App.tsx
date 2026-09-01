@@ -8,6 +8,7 @@ import { BonusesPage } from './pages/BonusesPage';
 import { CorrectionsPage } from './pages/CorrectionsPage';
 import { DayClosePage } from './pages/DayClosePage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { PerformancePage } from './pages/PerformancePage';
 import { ReportsPage } from './pages/ReportsPage';
 import { CurrencyExchangePage } from './pages/CurrencyExchangePage';
@@ -61,10 +62,14 @@ function Router() {
     return <LoginPage />;
   }
 
+  // §32: "OWNER системага киргенде негизги абалды бир экрандан көрүшү керек".
+  // Everyone else lands where their work is — the counter (§1).
+  const home = user.role === 'OWNER' ? '/dashboard' : '/sell';
+
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route path="/" element={<Navigate to="/sell" replace />} />
+        <Route path="/" element={<Navigate to={home} replace />} />
         <Route path="/sell" element={<SellPage />} />
         <Route path="/sell/:id" element={<SaleCheckoutPage />} />
         <Route path="/sales" element={<MySalesPage />} />
@@ -107,6 +112,7 @@ function Router() {
         <Route path="/day-close" element={<DayClosePage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/performance" element={<PerformancePage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/products/:id" element={<ProductStockPage />} />
@@ -118,7 +124,7 @@ function Router() {
         <Route path="/claims/:id" element={<ClaimPage />} />
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/menu" element={<MenuPage />} />
-        <Route path="*" element={<Navigate to="/sell" replace />} />
+        <Route path="*" element={<Navigate to={home} replace />} />
       </Route>
     </Routes>
   );

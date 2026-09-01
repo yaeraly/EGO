@@ -4,7 +4,7 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–17 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–18 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
@@ -12,8 +12,8 @@ returns; defect acts, write-offs and scrap income; operating expenses;
 salaries; the seller's bonus; correction and reversal; the daily cash
 handover, Day Close and the Period Lock; the three financial statements;
 ABC, XYZ, margin and what needs ordering; plans, KPI and the reports by
-salesperson and by customer.
-801 API tests and 11 client tests passing.
+salesperson and by customer; the OWNER's dashboard.
+813 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -114,6 +114,8 @@ salesperson and by customer.
 | 17.2 By salesperson: result, plan, bonus and till (§31) | done |
 | 17.3 By customer, and who has stopped coming (§30) | done |
 | 17.4 UI: sellers, customers and the plan on one screen | done |
+| 18.1 The OWNER's one screen, assembled from the reports (§32) | done |
+| 18.2 UI: the dashboard, and the OWNER lands on it | done |
 
 Module 0 acceptance criteria:
 
@@ -396,6 +398,23 @@ Module 17 acceptance criteria:
 | 15 | §30: customers who used to buy and have stopped — a one-time buyer is not one of them | `test/performance.spec.ts` |
 | 16 | §2: both reports are the OWNER's | `test/performance.spec.ts` |
 
+Module 18 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | An empty business reads as empty — no invented figures, and no percentage without a plan | `test/dashboard.spec.ts` |
+| 2 | §32: today's and this month's sales and profit | `test/dashboard.spec.ts` |
+| 3 | §28: the dashboard agrees with the Profit and Loss it summarises, to the kopeck | `test/dashboard.spec.ts` |
+| 4 | §32, §19: cash by currency, and what is still in the salespeople's tills | `test/dashboard.spec.ts` |
+| 5 | §16.4: what customers owe, and how much of it is already late | `test/dashboard.spec.ts` |
+| 6 | §17-А.5: a customer advance is held apart from what customers owe | `test/dashboard.spec.ts` |
+| 7 | §4, §5.2: the China debt in yuan and in som, the carrier's in dollars | `test/dashboard.spec.ts` |
+| 8 | §12-А: the sellable shelf and the defect shelf, apart and together | `test/dashboard.spec.ts` |
+| 9 | §29: what has run low, with what is already on its way | `test/dashboard.spec.ts` |
+| 10 | §32: what sold most and what earned most, ranked apart | `test/dashboard.spec.ts` |
+| 11 | §24, §31: the salespeople against their plan, and the business against its own | `test/dashboard.spec.ts` |
+| 12 | §2, §32: the dashboard is the OWNER's | `test/dashboard.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -410,6 +429,20 @@ Module 17 acceptance criteria:
   inside SLR would pay it twice. The bonus screen shows what is payable per
   employee; the OWNER decides whether to hand it over as BON or to carry it
   into that month's salary.
+- **The dashboard recalculates nothing.** Every figure comes from the service
+  that owns it — the statements for money earned, the analyses for products,
+  the credit module for what is overdue — so a summary can never disagree with
+  the report it summarises. A test checks that today's revenue and profit
+  match the Profit and Loss to the kopeck, because the day they diverge is the
+  day nobody knows which to believe.
+- **The money "with the salespeople" excludes the OWNER's own till.** §32 asks
+  what is still in the sellers' accounts, which is money waiting to be handed
+  in (§19, §20). The OWNER's own till is already theirs. This is the same line
+  drawn in the Day Close pre-check.
+- **The OWNER lands on the dashboard, everyone else on the counter.** §32 says
+  the OWNER should see the state of the business on one screen when they log
+  in; §1 asks the selling screen to be the fastest thing in the system for
+  everyone else.
 - **A plan is monthly, and the report reads the month the period ends in.**
   §24 says "айлык/мезгилдик план" without defining the period, so the plan
   carries a year and a month — the same shape as a salary period (§25). A

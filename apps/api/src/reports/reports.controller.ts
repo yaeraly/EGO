@@ -11,6 +11,7 @@ import {
   ReorderReport,
   SalesTrendReport,
 } from './analytics.service';
+import { Dashboard, DashboardService } from './dashboard.service';
 import {
   CustomerReport,
   PerformanceService,
@@ -49,7 +50,19 @@ export class ReportsController {
     private readonly reports: ReportsService,
     private readonly analytics: AnalyticsService,
     private readonly performance: PerformanceService,
+    private readonly dashboard: DashboardService,
   ) {}
+
+  /**
+   * The OWNER's one screen (§32).
+   *
+   * Assembled from the reports themselves rather than recalculated, so it
+   * can never disagree with the statement it summarises.
+   */
+  @Get('dashboard')
+  dashboardView(): Promise<Dashboard> {
+    return this.dashboard.load();
+  }
 
   /** ДДС — Cash Flow. */
   @Get('cash-flow')
