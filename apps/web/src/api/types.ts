@@ -1072,3 +1072,90 @@ export interface MonthClosePreCheck {
   open_days: { business_date: string; status: string }[];
   can_close: boolean;
 }
+
+/** ДДС — Cash Flow (§28). */
+export interface CashFlowLine {
+  doc_type: string;
+  currency: string;
+  direction: 'IN' | 'OUT';
+  amount: string;
+  kgs: string;
+  documents: number;
+}
+
+export interface CashFlowSection {
+  category: 'OPERATING' | 'INVESTING' | 'CAPITAL_FINANCING' | 'INTERNAL_TRANSFER';
+  in_kgs: string;
+  out_kgs: string;
+  net_kgs: string;
+  lines: CashFlowLine[];
+}
+
+export interface CashFlowReport {
+  from: string;
+  to: string;
+  opening_cash_kgs: string;
+  sections: CashFlowSection[];
+  net_change_kgs: string;
+  closing_cash_kgs: string;
+  unvalued: { doc_number: string; currency: string; amount: string }[];
+}
+
+/** ОПУ — Profit and Loss (§28). */
+export interface ProfitAndLossReport {
+  from: string;
+  to: string;
+  sales_count: number;
+  revenue: string;
+  returns: string;
+  net_revenue: string;
+  cogs: string;
+  returned_cost: string;
+  net_cogs: string;
+  gross_margin: string;
+  operating_expenses: string;
+  expense_lines: { category: string; amount: string }[];
+  other_income: string;
+  write_offs: string;
+  inventory_result: string;
+  operating_profit: string;
+  fx_gain_loss: string;
+  net_profit: string;
+  owner_withdrawals_excluded: string;
+}
+
+/** Баланс (§28). */
+export interface BalanceReport {
+  as_of: string;
+  cash: {
+    account_id: string;
+    name: string;
+    currency: string;
+    type: string;
+    amount: string;
+    kgs: string;
+  }[];
+  cash_total_kgs: string;
+  inventory: { wtype: string; code: string; qty: string; value: string }[];
+  inventory_main: string;
+  inventory_defect: string;
+  inventory_total: string;
+  customer_receivables: string;
+  customer_advances: string;
+  supplier_payable: { name: string; balance_cny: string; kgs: string }[];
+  supplier_payable_total_kgs: string;
+  supplier_receivable_total_kgs: string;
+  cargo_payable: { name: string; balance_usd: string; kgs: string }[];
+  cargo_payable_total_kgs: string;
+  cargo_receivable_total_kgs: string;
+  open_claims: { currency: string; amount: string; count: number }[];
+  open_claims_total: string;
+  capital_contributed: string;
+  capital_withdrawn: string;
+  retained_earnings: string;
+  assets: string;
+  liabilities: string;
+  equity: string;
+  difference: string;
+  balanced: boolean;
+}

@@ -15,6 +15,14 @@ export enum CashFlowCategory {
   CAPITAL_FINANCING = 'CAPITAL_FINANCING',
   /** Money moving between the company's own accounts; total cash unchanged. */
   INTERNAL_TRANSFER = 'INTERNAL_TRANSFER',
+  /**
+   * Buying or selling something the business keeps rather than trades.
+   *
+   * §28 asks the statement to separate this flow. Nothing in the system
+   * produces one yet — goods bought for resale are operating, not investing —
+   * so the section exists and reads zero until there is a document for it.
+   */
+  INVESTING = 'INVESTING',
 }
 
 /**
@@ -27,6 +35,18 @@ const CATEGORIES: Partial<Record<doc_type, CashFlowCategory>> = {
   [doc_type.CAP]: CashFlowCategory.CAPITAL_FINANCING,
   [doc_type.WDW]: CashFlowCategory.CAPITAL_FINANCING,
   [doc_type.TRN]: CashFlowCategory.INTERNAL_TRANSFER,
+  // Trading, all of it: the goods sold, the money the customer pays for
+  // them, what is refunded, and what is paid to the supplier and the
+  // carrier who brought them (§13, §16-А, §35, §4, §5.2).
+  [doc_type.SAL]: CashFlowCategory.OPERATING,
+  [doc_type.LSS]: CashFlowCategory.OPERATING,
+  [doc_type.PAY]: CashFlowCategory.OPERATING,
+  [doc_type.RET]: CashFlowCategory.OPERATING,
+  // An advance is customers' money held against goods not yet given
+  // (§17-А), so it is cash the business really has and really may owe back.
+  [doc_type.ADV]: CashFlowCategory.OPERATING,
+  [doc_type.SPY]: CashFlowCategory.OPERATING,
+  [doc_type.CPY]: CashFlowCategory.OPERATING,
   // §38.7 — scrap money is cash the business earned, not equity and not a
   // move between its own accounts.
   [doc_type.OIN]: CashFlowCategory.OPERATING,

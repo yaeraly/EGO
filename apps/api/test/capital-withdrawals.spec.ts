@@ -426,9 +426,12 @@ describe('Capital and withdrawals (Modules 1.1 and 1.2, criterion 3)', () => {
       );
     });
 
-    it('leaves types whose module has not landed unclassified', () => {
-      expect(cashFlowCategory(doc_type.SAL)).toBeNull();
-      expect(isCapitalFinancing(doc_type.SAL)).toBe(false);
+    it('leaves a type that moves no money unclassified', () => {
+      // A LOT records what a batch cost; no money crosses an account for it,
+      // so it belongs in no Cash Flow section. (SAL was the example here
+      // until §28 gave every money-moving type its category.)
+      expect(cashFlowCategory(doc_type.LOT)).toBeNull();
+      expect(isCapitalFinancing(doc_type.LOT)).toBe(false);
     });
   });
 

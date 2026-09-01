@@ -4,14 +4,14 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–14 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–15 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
 returns; defect acts, write-offs and scrap income; operating expenses;
 salaries; the seller's bonus; correction and reversal; the daily cash
-handover, Day Close and the Period Lock.
-744 API tests and 11 client tests passing.
+handover, Day Close and the Period Lock; the three financial statements.
+764 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -100,6 +100,10 @@ handover, Day Close and the Period Lock.
 | 14.2 Day Close Pre-check: unresolved documents and unhanded tills | done |
 | 14.3 Day Close, Month Close and Period Reopen (Period Lock) | done |
 | 14.4 UI: my day, what is blocking, and closing it | done |
+| 15.1 ОПУ / Profit and Loss (§28, §3.1.5, §42.8) | done |
+| 15.2 ДДС / Cash Flow, split by kind of flow (§28) | done |
+| 15.3 Баланс, with the check that it holds together (§28, §17-А.5) | done |
+| 15.4 UI: the three statements on one screen | done |
 
 Module 0 acceptance criteria:
 
@@ -324,6 +328,26 @@ Module 14 acceptance criteria:
 | 12 | Period Lock: a month waits for every one of its days, then locks the whole month | `test/day-close.spec.ts` |
 | 13 | Period Reopen: OWNER, PIN and a real reason, kept in the audit log; a month never closed cannot be reopened | `test/day-close.spec.ts` |
 
+Module 15 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §13.3, §35: profit is revenue less what came back, less the FIFO cost of what stayed sold | `test/reports.spec.ts` |
+| 2 | §17-А.5: a customer advance is a liability and is never netted against what customers owe | `test/reports.spec.ts` |
+| 3 | §27, §42.3: a balance that does not hold reports its difference rather than absorbing it | `test/reports.spec.ts` |
+| 4 | §3.1.1, §3.1.6: an owner withdrawal changes no profit figure, and is stated as excluded rather than dropped | `test/reports.spec.ts` |
+| 5 | §35, §18.0: a return comes off the revenue and the cost together | `test/reports.spec.ts` |
+| 6 | §27.1: an expense a correction reversed is no longer an expense — while both its movements still stand in the Cash Flow | `test/reports.spec.ts` |
+| 7 | §22: a stock shortage is a line of its own, not part of the cost of goods sold | `test/reports.spec.ts` |
+| 8 | §28, §19: the Cash Flow separates operating from capital, and an internal transfer changes no total | `test/reports.spec.ts` |
+| 9 | §3.1.5: a withdrawal is cash out in the Cash Flow and never an operating outflow | `test/reports.spec.ts` |
+| 10 | §10: a foreign account is valued at the rate that applied when the money moved, not today's | `test/reports.spec.ts` |
+| 11 | A period opens where the one before it closed | `test/reports.spec.ts` |
+| 12 | §28, §12-А: the sellable shelf and the defect shelf are separate lines and a total | `test/reports.spec.ts` |
+| 13 | The balance holds through a real purchase, receipt, sale and withdrawal — difference 0.00 | `test/reports.spec.ts` |
+| 14 | Retained earnings are the profit since the first document, computed, not stored | `test/reports.spec.ts` |
+| 15 | §2: the financial picture is the OWNER's | `test/reports.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -338,6 +362,29 @@ Module 14 acceptance criteria:
   inside SLR would pay it twice. The bonus screen shows what is payable per
   employee; the OWNER decides whether to hand it over as BON or to carry it
   into that month's salary.
+- **A supplier payable is raised when the order is confirmed, and the goods
+  it bought are not an asset until they arrive.** The balance check found
+  this: the ledger records the payable against the PUR document, so between
+  ordering and receiving there is a liability with nothing on the asset side,
+  and the balance does not hold by exactly that amount. The knowledge base
+  never says when the payable arises — §4.2 describes the debt and §4.3 the
+  prepayment, neither the moment. Two ways to settle it, and it is your call:
+  the payable arises at receipt (§7), which is when the goods and the debt
+  both become real; or it stays at the order and the balance gains an
+  "ordered, not yet received" asset line, which §28's list does not have. I
+  have not changed either module — this needs the rule first.
+- **The balance is the position now, not on a chosen date.** What is on the
+  shelf, what customers owe, and what is held against advances are current
+  figures; an advance's applications are a running total with no per-
+  application row, so a back-dated balance cannot be reconstructed exactly.
+  Dating some lines and not others would produce a balance that never
+  existed, so the report is honest about being "now". Say the word if you need
+  a month-end balance and the advance applications can gain their own rows.
+- **The Cash Flow's investing section exists and reads zero.** §28 asks the
+  statement to separate operating, investing and capital/financing flows.
+  Nothing the system does today is investing — goods bought for resale are
+  trading, not investment — so the section is there, empty, rather than
+  quietly missing.
 - **A shortfall in the till is documented, not written off** (§20). §20 says
   the difference is recorded with its reason and documented, and
   `daily_cash_handovers` is where that lives — but it names no document that
