@@ -19,6 +19,11 @@ export class CategoriesRepository {
     return this.prisma.product_categories.findUnique({ where: { name } });
   }
 
+  /** The SKU prefix is unique when set, so a code names one category. */
+  findByCode(code: string): Promise<product_categories | null> {
+    return this.prisma.product_categories.findFirst({ where: { code } });
+  }
+
   findAll(): Promise<product_categories[]> {
     return this.prisma.product_categories.findMany({ orderBy: { name: 'asc' } });
   }

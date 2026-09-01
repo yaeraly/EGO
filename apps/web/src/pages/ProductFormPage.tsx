@@ -7,12 +7,11 @@ import { useApi } from '../hooks/useApi';
 
 /** Every field the form writes, kept as the strings the API expects. */
 interface Draft {
-  sku: string;
   name: string;
   category_id: string;
   brand: string;
   unit: string;
-  barcode: string;
+  purchase_price_cny: string;
   oem_code: string;
   description: string;
   compatibility_notes: string;
@@ -33,12 +32,11 @@ interface Draft {
 }
 
 const EMPTY: Draft = {
-  sku: '',
   name: '',
   category_id: '',
   brand: '',
   unit: 'даана',
-  barcode: '',
+  purchase_price_cny: '',
   oem_code: '',
   description: '',
   compatibility_notes: '',
@@ -61,8 +59,14 @@ const EMPTY: Draft = {
 /**
  * Product card, create and edit (§12-Б.1–.8).
  *
- * SKU is not editable after creation: §12-Б.9.1 makes it the identity every
- * purchase, LOT and sale points at, so changing it would rename history.
+ * The SKU and the barcode are not on this form at all: the system issues both
+ * (§12-Б.9.1). A code typed by hand is eventually mistyped or repeated, and
+ * neither shows up until a receipt or a sale reaches the wrong part. They are
+ * shown on the product's own card once it exists.
+ *
+ * The order of the fields is the order the person filling it in knows the
+ * answers: what it is, what it weighs, what it costs in China — then the
+ * details that can wait.
  */
 export function ProductFormPage() {
   const { id } = useParams();
@@ -127,15 +131,6 @@ export function ProductFormPage() {
         <ErrorBanner message={error} />
 
         <label>
-          SKU (§12-Б.9.1 — уникалдуу, кийин өзгөрбөйт)
-          <input
-            value={draft.sku}
-            onChange={(e) => set('sku')(e.target.value)}
-            disabled={editing}
-            required
-          />
-        </label>
-        <label>
           Аталышы
           <input
             value={draft.name}
@@ -143,6 +138,18 @@ export function ProductFormPage() {
             required
           />
         </label>
+        <label>
+          Салмагы (кг)
+          <input
+            value={draft.weight_kg}
+            inputMode="decimal"
+            onChange={(e) => set('weight_kg')(e.target.value)}
+            required
+          />
+        </label>
+        <p className="muted" style={{ margin: 0 }}>
+          Салмагы жок товар менен приход тастыкталбайт (§9.1).
+        </p>
         <label>
           Категория
           <select
@@ -152,23 +159,39 @@ export function ProductFormPage() {
             <option value="">—</option>
             {(categories.data ?? []).map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name} ({category.default_warranty_days} күн кепилдик)
+                {category.name}
+                {category.code ? ` (${category.code}-…)` : ''} ·{' '}
+                {category.default_warranty_days} күн кепилдик
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          Бренд
-          <input value={draft.brand} onChange={(e) => set('brand')(e.target.value)} />
         </label>
         <label>
           Өлчөө бирдиги
           <input value={draft.unit} onChange={(e) => set('unit')(e.target.value)} />
         </label>
         <label>
-          Barcode
-          <input value={draft.barcode} onChange={(e) => set('barcode')(e.target.value)} />
+          Кытайдагы баасы (CNY)
+          <input
+            value={draft.purchase_price_cny}
+            inputMode="decimal"
+            placeholder="0.00"
+            onChange={(e) => set('purchase_price_cny')(e.target.value)}
+          />
         </label>
+        <p className="muted" style={{ margin: 0 }}>
+          Сатып алуу жардамчысы (§33) заказдын наркын ушуну менен эсептейт.
+          Чыныгы заказ болгондон кийин акыркы факт баа колдонулат (§12-Б.5).
+        </p>
+
+        {!editing && (
+          <p className="banner ok" style={{ margin: 0 }}>
+            SKU менен штрихкодду система өзү берет — кол менен терилбейт
+            (§12-Б.9.1).
+          </p>
+        )}
+
+        <h3 className="section-title">Кошумча маалымат</h3>
         <label>
           OEM / Factory коду
           <input
@@ -176,19 +199,9 @@ export function ProductFormPage() {
             onChange={(e) => set('oem_code')(e.target.value)}
           />
         </label>
-
-        <h3 className="section-title">Физикалык маалымат (§12-Б.3)</h3>
-        <p className="muted" style={{ margin: 0 }}>
-          Салмагы жок товар менен приход тастыкталбайт (§9.1). Көлөм боюнча
-          чыгым бөлүштүрүлсө, өлчөмдөр да керек (§9.4).
-        </p>
         <label>
-          Салмагы (кг)
-          <input
-            value={draft.weight_kg}
-            inputMode="decimal"
-            onChange={(e) => set('weight_kg')(e.target.value)}
-          />
+          Бренд
+          <input value={draft.brand} onChange={(e) => set('brand')(e.target.value)} />
         </label>
         <div className="inline">
           <label>
@@ -334,7 +347,10 @@ export function ProductFormPage() {
           </label>
         )}
 
-        <button type="submit" disabled={busy || !draft.sku.trim() || !draft.name.trim()}>
+        <button
+          type="submit"
+          disabled={busy || !draft.name.trim() || !draft.weight_kg.trim()}
+        >
           {busy ? 'Сакталууда…' : 'Сактоо'}
         </button>
       </form>
@@ -344,12 +360,11 @@ export function ProductFormPage() {
 
 function toDraft(product: Product): Draft {
   return {
-    sku: product.sku,
     name: product.name,
     category_id: product.category_id ?? '',
     brand: product.brand ?? '',
     unit: product.unit,
-    barcode: product.barcode ?? '',
+    purchase_price_cny: product.purchase_price_cny ?? '',
     oem_code: product.oem_code ?? '',
     description: product.description ?? '',
     compatibility_notes: product.compatibility_notes ?? '',
@@ -382,15 +397,12 @@ function toBody(draft: Draft, editing: boolean): Record<string, unknown> {
     name: draft.name.trim(),
     unit: draft.unit.trim() || 'даана',
   };
-  if (!editing) {
-    body.sku = draft.sku.trim();
-  } else {
+  if (editing) {
     body.is_active = draft.is_active;
   }
 
   const text: (keyof Draft)[] = [
     'brand',
-    'barcode',
     'oem_code',
     'description',
     'compatibility_notes',
@@ -412,6 +424,7 @@ function toBody(draft: Draft, editing: boolean): Record<string, unknown> {
     'reorder_point',
     'base_markup_pct',
     'min_selling_price',
+    'purchase_price_cny',
   ];
   for (const field of decimals) {
     const value = String(draft[field]).trim();

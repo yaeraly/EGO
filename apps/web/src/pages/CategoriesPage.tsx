@@ -19,6 +19,7 @@ export function CategoriesPage() {
   const categories = useApi<Category[]>('/categories');
 
   const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const [days, setDays] = useState('0');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -30,9 +31,14 @@ export function CategoriesPage() {
     try {
       await api('/categories', {
         method: 'POST',
-        body: { name: name.trim(), default_warranty_days: Number(days || '0') },
+        body: {
+          name: name.trim(),
+          default_warranty_days: Number(days || '0'),
+          ...(code.trim() ? { code: code.trim() } : {}),
+        },
       });
       setName('');
+      setCode('');
       setDays('0');
       categories.reload();
     } catch (e: unknown) {
@@ -81,6 +87,19 @@ export function CategoriesPage() {
               required
             />
           </label>
+          <label>
+            SKU префикси
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="MOT"
+              maxLength={6}
+            />
+          </label>
+          <p className="muted" style={{ margin: 0 }}>
+            Бул категориядагы товарлардын коду ушундан башталат: MOT-00042.
+            Латын тамгалары менен сандар гана. Бош калса — PRD.
+          </p>
           <label>
             Демейки кепилдик (күн)
             <input
@@ -132,7 +151,10 @@ function CategoryRow({
   return (
     <div className="card">
       <div className="row">
-        <strong>{category.name}</strong>
+        <strong>
+          {category.name}
+          {category.code && <span className="muted"> · {category.code}-…</span>}
+        </strong>
         <span className="badge neutral">{category.product_count} товар</span>
       </div>
 

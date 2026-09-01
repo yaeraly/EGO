@@ -23,10 +23,9 @@ import { DECIMAL_MESSAGE, DECIMAL_PATTERN } from '../../common/decimal';
  * SKU a person can read.
  */
 export class CreateProductDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(64)
-  sku!: string;
+  // sku and barcode are deliberately absent: the system issues both
+  // (§12-Б.9.1). A code somebody typed is eventually mistyped or repeated,
+  // and neither shows up until a receipt or a sale reaches the wrong part.
 
   @IsString()
   @MinLength(1)
@@ -50,12 +49,19 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   @MaxLength(64)
-  barcode?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
   oem_code?: string;
+
+  /**
+   * What the part costs in China, in yuan.
+   *
+   * §12-Б.5 keeps the *last* purchase price, which only exists once something
+   * has been ordered. This is the figure entered when the product is created,
+   * so the purchasing assistant (§33) can price an order for a part nobody
+   * has bought yet. A real purchase supersedes it.
+   */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `purchase_price_cny ${DECIMAL_MESSAGE}` })
+  purchase_price_cny?: string;
 
   /** §9.1 makes this mandatory at Receipt; optional until then. */
   @IsOptional()
@@ -144,6 +150,8 @@ export class CreateProductDto {
 }
 
 export class UpdateProductDto {
+  // sku and barcode are not editable: a product keeps the codes it was
+  // issued for as long as it exists (§12-Б.9.1).
   @IsOptional()
   @IsString()
   @MinLength(1)
@@ -167,12 +175,19 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   @MaxLength(64)
-  barcode?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(64)
   oem_code?: string;
+
+  /**
+   * What the part costs in China, in yuan.
+   *
+   * §12-Б.5 keeps the *last* purchase price, which only exists once something
+   * has been ordered. This is the figure entered when the product is created,
+   * so the purchasing assistant (§33) can price an order for a part nobody
+   * has bought yet. A real purchase supersedes it.
+   */
+  @IsOptional()
+  @Matches(DECIMAL_PATTERN, { message: `purchase_price_cny ${DECIMAL_MESSAGE}` })
+  purchase_price_cny?: string;
 
   @IsOptional()
   @Matches(DECIMAL_PATTERN, { message: `weight_kg ${DECIMAL_MESSAGE}` })

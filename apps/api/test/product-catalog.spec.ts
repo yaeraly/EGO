@@ -2,6 +2,12 @@ import { INestApplication } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import request from 'supertest';
 import { createTestApp } from './app-harness';
+import {
+  ean13CheckDigit,
+  formatBarcode,
+  formatSku,
+  normalisePrefix,
+} from '../src/products/product-codes';
 import { confirmedPurchase } from './module3-harness';
 import { Module4Context, resetModule4, stockLayer } from './module4-harness';
 
@@ -334,12 +340,151 @@ describe('Product catalogue (Module 5, §12-Б, §36-А.1)', () => {
     });
   });
 
+  describe('The code arithmetic, stated on its own', () => {
+    it('keeps a prefix to what a keyboard has by default', () => {
+      expect(normalisePrefix('mot')).toBe('MOT');
+      expect(normalisePrefix('Мотор')).toBe('PRD');
+      expect(normalisePrefix('bat-58!')).toBe('BAT58');
+      expect(normalisePrefix('VERYLONGCODE')).toBe('VERYLO');
+      expect(normalisePrefix(null)).toBe('PRD');
+    });
+
+    it('pads the number so codes sort the way they read', () => {
+      expect(formatSku('MOT', 1)).toBe('MOT-00001');
+      expect(formatSku('MOT', 42)).toBe('MOT-00042');
+      expect(formatSku('PRD', 12345)).toBe('PRD-12345');
+    });
+
+    it('closes an EAN-13 with the digit a scanner checks', () => {
+      // The textbook example: 400638133393 closes with 1.
+      expect(ean13CheckDigit('400638133393')).toBe(1);
+      expect(() => ean13CheckDigit('123')).toThrow();
+
+      const barcode = formatBarcode(1);
+      expect(barcode).toHaveLength(13);
+      expect(barcode.startsWith('20')).toBe(true);
+      expect(ean13CheckDigit(barcode.slice(0, 12))).toBe(Number(barcode[12]));
+    });
+  });
+
+  describe('The codes the system issues (§12-Б.9.1)', () => {
+    it('numbers a product under its category’s prefix', async () => {
+      const { body: category } = await asOwner(http().post('/api/categories'))
+        .send({ name: 'Моторлор', code: 'mot' })
+        .expect(201);
+      expect(category.code).toBe('MOT');
+
+      const first = await asOwner(http().post('/api/products'))
+        .send({ name: 'Мотор 1000W', category_id: category.id })
+        .expect(201);
+      const second = await asOwner(http().post('/api/products'))
+        .send({ name: 'Мотор 1500W', category_id: category.id })
+        .expect(201);
+
+      expect(first.body.sku).toMatch(/^MOT-\d{5}$/);
+      expect(second.body.sku).toBe(
+        `MOT-${String(Number(first.body.sku.slice(4)) + 1).padStart(5, '0')}`,
+      );
+    });
+
+    it('falls back to PRD when the category has no code, or there is none', async () => {
+      const { body: category } = await asOwner(http().post('/api/categories'))
+        .send({ name: 'Майда тетиктер' })
+        .expect(201);
+
+      const filed = await asOwner(http().post('/api/products'))
+        .send({ name: 'Болт', category_id: category.id })
+        .expect(201);
+      const loose = await asOwner(http().post('/api/products'))
+        .send({ name: 'Гайка' })
+        .expect(201);
+
+      expect(filed.body.sku).toMatch(/^PRD-\d{5}$/);
+      expect(loose.body.sku).toMatch(/^PRD-\d{5}$/);
+      expect(filed.body.sku).not.toBe(loose.body.sku);
+    });
+
+    it('gives every product a scannable barcode of its own', async () => {
+      const first = await asOwner(http().post('/api/products'))
+        .send({ name: 'Болт' })
+        .expect(201);
+      const second = await asOwner(http().post('/api/products'))
+        .send({ name: 'Гайка' })
+        .expect(201);
+
+      // EAN-13 from the 20-29 range GS1 keeps for in-store codes.
+      expect(first.body.barcode).toMatch(/^20\d{11}$/);
+      expect(first.body.barcode).toHaveLength(13);
+      expect(second.body.barcode).not.toBe(first.body.barcode);
+      expect(ean13CheckDigit(first.body.barcode.slice(0, 12))).toBe(
+        Number(first.body.barcode[12]),
+      );
+    });
+
+    it('refuses an SKU or a barcode sent from outside', async () => {
+      await asOwner(http().post('/api/products'))
+        .send({ name: 'Болт', sku: 'MINE-1' })
+        .expect(400);
+      await asOwner(http().post('/api/products'))
+        .send({ name: 'Болт', barcode: '2000000000009' })
+        .expect(400);
+    });
+
+    it('keeps a product’s codes when its category changes (§12-Б.9.1)', async () => {
+      const { body: motors } = await asOwner(http().post('/api/categories'))
+        .send({ name: 'Моторлор', code: 'MOT' })
+        .expect(201);
+      const { body: batteries } = await asOwner(http().post('/api/categories'))
+        .send({ name: 'Батареялар', code: 'BAT' })
+        .expect(201);
+
+      const { body: product } = await asOwner(http().post('/api/products'))
+        .send({ name: 'Мотор', category_id: motors.id })
+        .expect(201);
+
+      const { body: moved } = await asOwner(
+        http().patch(`/api/products/${product.id}`),
+      )
+        .send({ category_id: batteries.id })
+        .expect(200);
+
+      expect(moved.sku).toBe(product.sku);
+      expect(moved.barcode).toBe(product.barcode);
+    });
+
+    it('will not let two categories share a prefix', async () => {
+      await asOwner(http().post('/api/categories'))
+        .send({ name: 'Моторлор', code: 'MOT' })
+        .expect(201);
+      await asOwner(http().post('/api/categories'))
+        .send({ name: 'Моторчолор', code: 'MOT' })
+        .expect(409);
+      // A prefix has to survive being read aloud and typed on a phone.
+      await asOwner(http().post('/api/categories'))
+        .send({ name: 'Башкалар', code: 'МОТ' })
+        .expect(400);
+    });
+
+    it('records what the part costs in China (§12-Б.5, §33)', async () => {
+      const { body } = await asOwner(http().post('/api/products'))
+        .send({ name: 'Мотор 1000W', purchase_price_cny: '1000.00' })
+        .expect(201);
+      expect(body.purchase_price_cny).toBe('1000');
+
+      const { body: updated } = await asOwner(
+        http().patch(`/api/products/${body.id}`),
+      )
+        .send({ purchase_price_cny: '1150.00' })
+        .expect(200);
+      expect(updated.purchase_price_cny).toBe('1150');
+    });
+  });
+
   describe('Product fields §12-Б adds', () => {
     it('stores the stock thresholds, warranty and notes', async () => {
       const categoryId = await category('Моторлор', 30);
       const { body } = await asOwner(http().post('/api/products'))
         .send({
-          sku: 'MTR-1000',
           name: 'Мотор 1000W 60V',
           category_id: categoryId,
           weight_kg: '12.500',

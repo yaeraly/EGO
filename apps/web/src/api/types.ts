@@ -209,6 +209,8 @@ export interface Product {
   reorder_point: string;
   base_markup_pct: string | null;
   min_selling_price: string | null;
+  /** What it costs in China, in yuan (§12-Б.5, §33). */
+  purchase_price_cny: string | null;
   main_supplier_id: string | null;
   supplier_product_code: string | null;
 }
@@ -220,6 +222,8 @@ export interface Product {
 export interface Category {
   id: string;
   name: string;
+  /** The SKU prefix its parts are numbered under, e.g. MOT (§12-Б.9.1). */
+  code: string | null;
   /** §36-А.1 — what a product in it inherits when it sets no term. */
   default_warranty_days: number;
   product_count: number;

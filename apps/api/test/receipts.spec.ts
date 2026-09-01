@@ -122,7 +122,7 @@ describe('Receipt, landed cost and LOT (Module 3.4–3.7, §7, §9, §18.1)', ()
 
       const found = await problems(receiptId);
       const weight = found.find((p) => p.code === 'MISSING_WEIGHT')!;
-      expect(weight.sku).toBe('MOT-1800');
+      expect(weight.sku).toBe(ctx.productSkus[0]);
       expect(weight.message).toMatch(/физикалык салмак жок/);
       expect(weight.message).toMatch(/§9\.1/);
 
@@ -167,7 +167,7 @@ describe('Receipt, landed cost and LOT (Module 3.4–3.7, §7, §9, §18.1)', ()
 
       const found = await problems(receiptId);
       const volume = found.find((p) => p.code === 'MISSING_VOLUME')!;
-      expect(volume.sku).toBe('MOT-1800');
+      expect(volume.sku).toBe(ctx.productSkus[0]);
       expect(volume.message).toMatch(/көлөм\/chargeable weight жок/);
       expect(volume.message).toMatch(/§9\.4/);
 
@@ -266,8 +266,8 @@ describe('Receipt, landed cost and LOT (Module 3.4–3.7, §7, §9, §18.1)', ()
           l.allocated_total_kgs,
         ]),
       );
-      expect(byLine.get('MOT-1800')).toBe('600.00');
-      expect(byLine.get('BAT-58')).toBe('400.00');
+      expect(byLine.get(ctx.productSkus[0])).toBe('600.00');
+      expect(byLine.get(ctx.productSkus[1])).toBe('400.00');
     });
   });
 
@@ -295,7 +295,7 @@ describe('Receipt, landed cost and LOT (Module 3.4–3.7, §7, §9, §18.1)', ()
         body.lines.map((l: Record<string, string>) => [l.sku, l]),
       );
 
-      const motor = byLine.get('MOT-1800')!;
+      const motor = byLine.get(ctx.productSkus[0])!;
       expect(motor.total_weight_kg).toBe('50.000');
       expect(motor.allocated_total_kgs).toBe('1000.00');
       // 5 × 100 CNY × 10.00 = 5 000 KGS purchase cost.
@@ -304,7 +304,7 @@ describe('Receipt, landed cost and LOT (Module 3.4–3.7, §7, §9, §18.1)', ()
       // §9.7: 6 000 ÷ 5 = 1 200.0000 per unit.
       expect(motor.unit_landed_cost).toBe('1200.0000');
 
-      const battery = byLine.get('BAT-58')!;
+      const battery = byLine.get(ctx.productSkus[1])!;
       expect(battery.allocated_total_kgs).toBe('400.00');
       expect(battery.purchase_cost_kgs).toBe('5000.00');
       expect(battery.unit_landed_cost).toBe('540.0000');
@@ -367,8 +367,8 @@ describe('Receipt, landed cost and LOT (Module 3.4–3.7, §7, §9, §18.1)', ()
         body.lines.map((l: Record<string, string>) => [l.sku, l]),
       );
       // 1 000 by weight + 250 by value.
-      expect(byLine.get('MOT-1800')!.allocated_total_kgs).toBe('1250.00');
-      expect(byLine.get('BAT-58')!.allocated_total_kgs).toBe('650.00');
+      expect(byLine.get(ctx.productSkus[0])!.allocated_total_kgs).toBe('1250.00');
+      expect(byLine.get(ctx.productSkus[1])!.allocated_total_kgs).toBe('650.00');
       expect(body.total_landed_cost_kgs).toBe('11900.00');
     });
 
@@ -480,9 +480,9 @@ describe('Receipt, landed cost and LOT (Module 3.4–3.7, §7, §9, §18.1)', ()
       );
       // The freight lands on what arrived. What the lost goods cost is a
       // claim (§8.5), not a cost added to their neighbours' shelf price.
-      expect(byLine.get('MOT-1800')!.allocated_total_kgs).toBe('1000.00');
-      expect(byLine.get('BAT-58')!.allocated_total_kgs).toBe('0.00');
-      expect(byLine.get('BAT-58')!.unit_landed_cost).toBe('0.0000');
+      expect(byLine.get(ctx.productSkus[0])!.allocated_total_kgs).toBe('1000.00');
+      expect(byLine.get(ctx.productSkus[1])!.allocated_total_kgs).toBe('0.00');
+      expect(byLine.get(ctx.productSkus[1])!.unit_landed_cost).toBe('0.0000');
     });
   });
 

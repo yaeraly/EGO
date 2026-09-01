@@ -338,7 +338,7 @@ describe('Discrepancies and their financial consequence (Module 3.8, §8)', () =
         received_qty: '90',
         diff_qty: '-10',
       });
-      expect(difs[0].products.sku).toBe('MOT-1800');
+      expect(difs[0].products.sku).toBe(ctx.productSkus[0]);
     });
 
     it('record the settlement arithmetic in the audit log', async () => {

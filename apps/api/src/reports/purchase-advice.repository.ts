@@ -89,9 +89,10 @@ export class PurchaseAdviceRepository {
    * The last price paid for each product, in yuan, and who to order it from
    * (§12-Б.5).
    *
-   * The supplier of the last order, and failing that the product card's own
-   * main supplier — a product nobody has ordered yet still has somewhere to
-   * be ordered from.
+   * The price of the last order, and failing that the price entered on the
+   * product card when it was created (§12-Б.5) — a part nobody has ordered
+   * yet can still be priced. The supplier likewise: the last order's, and
+   * failing that the card's main supplier.
    */
   lastPrices(): Promise<
     {
@@ -102,7 +103,7 @@ export class PurchaseAdviceRepository {
   > {
     return this.prisma.$queryRaw`
       SELECT p.id AS product_id,
-             last.price_cny,
+             COALESCE(last.price_cny, p.purchase_price_cny) AS price_cny,
              COALESCE(last.supplier_id, p.main_supplier_id) AS supplier_id
       FROM products p
       LEFT JOIN LATERAL (

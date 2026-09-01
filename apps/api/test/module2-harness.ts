@@ -18,6 +18,8 @@ export interface Module2Context {
   supplierId: string;
   cargoCompanyId: string;
   productIds: string[];
+  /** The SKUs the system issued for them (§12-Б.9.1). */
+  productSkus: string[];
 }
 
 /**
@@ -68,15 +70,15 @@ export async function resetModule2(
     .expect(201);
 
   const productIds: string[] = [];
-  for (const [sku, name] of [
-    ['MOT-1800', 'Мотор 1800W'],
-    ['BAT-58', 'Аккумулятор 58Ah'],
-    ['CTL-STD', 'Контроллер'],
-  ]) {
+  const productSkus: string[] = [];
+  // The SKU is the system's to issue (§12-Б.9.1), so the fixture names the
+  // products, lets the server number them, and hands the numbers on.
+  for (const name of ['Мотор 1800W', 'Аккумулятор 58Ah', 'Контроллер']) {
     const { body } = await asOwner(http().post('/api/products'))
-      .send({ sku, name, weight_kg: '12.500' })
+      .send({ name, weight_kg: '12.500' })
       .expect(201);
     productIds.push(body.id as string);
+    productSkus.push(body.sku as string);
   }
 
   return {
@@ -90,6 +92,7 @@ export async function resetModule2(
     supplierId: supplier.id as string,
     cargoCompanyId: cargo.id as string,
     productIds,
+    productSkus,
   };
 }
 

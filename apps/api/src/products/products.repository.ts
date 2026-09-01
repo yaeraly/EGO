@@ -7,8 +7,12 @@ import { PrismaService } from '../prisma/prisma.service';
 export class ProductsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  insert(data: Prisma.productsUncheckedCreateInput): Promise<products> {
-    return this.prisma.products.create({ data });
+  /** `db` so the caller can allocate the codes and insert in one transaction. */
+  insert(
+    data: Prisma.productsUncheckedCreateInput,
+    db: Db = this.prisma,
+  ): Promise<products> {
+    return db.products.create({ data });
   }
 
   findById(db: Db, id: string): Promise<products | null> {

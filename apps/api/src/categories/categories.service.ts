@@ -31,8 +31,14 @@ export class CategoriesService {
       throw new ConflictException(`«${name}» категориясы мурдатан бар (§12-Б.1)`);
     }
 
+    const code = dto.code?.trim().toUpperCase() || null;
+    if (code && (await this.repository.findByCode(code))) {
+      throw new ConflictException(`«${code}» коду башка категорияда колдонулуп жатат`);
+    }
+
     const category = await this.repository.insert({
       name,
+      code,
       default_warranty_days: dto.default_warranty_days ?? 0,
     });
 
@@ -43,6 +49,7 @@ export class CategoriesService {
       action: 'CATEGORY_CREATED',
       newValue: {
         name: category.name,
+        code: category.code,
         default_warranty_days: category.default_warranty_days,
       },
     });
@@ -84,8 +91,22 @@ export class CategoriesService {
       }
     }
 
+    const code =
+      dto.code === undefined ? undefined : dto.code.trim().toUpperCase() || null;
+    if (code && code !== before.code) {
+      const clash = await this.repository.findByCode(code);
+      if (clash) {
+        throw new ConflictException(
+          `«${code}» коду башка категорияда колдонулуп жатат`,
+        );
+      }
+    }
+
+    // Changing a code does not renumber the SKUs already issued: a code is
+    // the state at the moment it was given (§12-Б.9.1).
     const category = await this.repository.update(id, {
       ...(name ? { name } : {}),
+      ...(code === undefined ? {} : { code }),
       ...(dto.default_warranty_days === undefined
         ? {}
         : { default_warranty_days: dto.default_warranty_days }),
@@ -102,6 +123,7 @@ export class CategoriesService {
       },
       newValue: {
         name: category.name,
+        code: category.code,
         default_warranty_days: category.default_warranty_days,
       },
     });

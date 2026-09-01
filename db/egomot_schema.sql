@@ -294,7 +294,17 @@ CREATE TABLE withdrawal_docs (
 CREATE TABLE product_categories (
   id   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL UNIQUE,
-  default_warranty_days INT NOT NULL DEFAULT 0      -- §36-А.1
+  default_warranty_days INT NOT NULL DEFAULT 0,     -- §36-А.1
+  code TEXT                                         -- SKU префикси, мис. 'MOT'
+);
+CREATE UNIQUE INDEX idx_categories_code ON product_categories(code)
+  WHERE code IS NOT NULL;
+
+-- SKU эсептегичи (PREFIX-NNNNN). Документ номерлөө менен бирдей ыкма:
+-- SELECT ... FOR UPDATE, ошондуктан эки товар бир номерди албайт.
+CREATE TABLE product_sequences (
+  prefix      TEXT PRIMARY KEY,
+  last_number INT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE products (                              -- §12-Б
@@ -326,8 +336,16 @@ CREATE TABLE products (                              -- §12-Б
   supplier_product_code TEXT,
   is_active    BOOLEAN NOT NULL DEFAULT true,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  -- Кытайдагы баа (§12-Б.5): жаңы товарга баштапкы баа. Чыныгы заказ
+  -- болгондон кийин акыркы факт баа үстөмдүк кылат.
+  purchase_price_cny NUMERIC(14,2)
+    CHECK (purchase_price_cny IS NULL OR purchase_price_cny >= 0)
 );
+-- Barcode автоматтык түзүлөт, ошондуктан уникалдуу болушу керек. Толтурулганы
+-- гана текшерилет: эски товарларда barcode жок болушу мүмкүн.
+CREATE UNIQUE INDEX idx_products_barcode ON products(barcode)
+  WHERE barcode IS NOT NULL;
 
 -- Структураланган Compatibility — §12-Б.8 (Приоритет 3). MVP'деги
 -- products.compatibility_notes ордунда калат: эркин жазылган эскертүү менен

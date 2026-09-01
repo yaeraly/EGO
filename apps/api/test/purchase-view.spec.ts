@@ -185,7 +185,7 @@ describe('Purchase board (Module 2.4 and 2.8 read model)', () => {
       expect(body.supplier.name).toBe('Yiwu Partner');
       expect(body.cargo_company.name).toBe('Silk Road Cargo');
       expect(body.items).toHaveLength(2);
-      expect(body.items[0].sku).toBe('MOT-1800');
+      expect(body.items[0].sku).toBe(ctx.productSkus[0]);
       expect(body.items[1].line_total_cny).toBe('1002.00');
       expect(body.totals.total_cny).toBe('2002.00');
     });
