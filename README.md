@@ -4,13 +4,14 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–13 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–14 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
 returns; defect acts, write-offs and scrap income; operating expenses;
-salaries; the seller's bonus; correction and reversal.
-724 API tests and 11 client tests passing.
+salaries; the seller's bonus; correction and reversal; the daily cash
+handover, Day Close and the Period Lock.
+744 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -95,6 +96,10 @@ salaries; the seller's bonus; correction and reversal.
 | 13.2 Reversing a document's money movements, guarded | done |
 | 13.3 The one document a closed period accepts (Period Lock) | done |
 | 13.4 UI: pick the document, state the reason, the OWNER's PIN | done |
+| 14.1 The salesperson's day, and handing the till over (§20) | done |
+| 14.2 Day Close Pre-check: unresolved documents and unhanded tills | done |
+| 14.3 Day Close, Month Close and Period Reopen (Period Lock) | done |
+| 14.4 UI: my day, what is blocking, and closing it | done |
 
 Module 0 acceptance criteria:
 
@@ -301,6 +306,24 @@ Module 13 acceptance criteria:
 | 13 | Period Lock: the period it belongs to and the moment it was entered are kept apart (31 Aug closed, error found 2 Sep) | `test/corrections.spec.ts` |
 | 14 | §28: a correction takes the Cash Flow category of the document it reverses, never one of its own | `test/corrections.spec.ts` |
 
+Module 14 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §20: the day shows what the system says was taken — sales, credit, returns, advances, and every account of that person | `test/day-close.spec.ts` |
+| 2 | §2: each person sees their own day; the OWNER may look at anyone's | `test/day-close.spec.ts` |
+| 3 | §19, §20: the till is handed over by TRN, and the comparison is recorded with it in one transaction | `test/day-close.spec.ts` |
+| 4 | §20: a difference without a reason is refused; with one it is recorded, and the money stays visible in the till | `test/day-close.spec.ts` |
+| 5 | §20: the day becomes CASH_HANDED once nobody who worked it is still holding money | `test/day-close.spec.ts` |
+| 6 | Once a day, from your own cash account, to a central account (§19) | `test/day-close.spec.ts` |
+| 7 | Period Lock: the pre-check names the unfinished documents rather than counting them, and the salesperson can read it | `test/day-close.spec.ts` |
+| 8 | Period Lock: an unresolved document blocks the close — "OWNER да bypass кыла албайт" | `test/day-close.spec.ts` |
+| 9 | Period Lock: an unhanded till blocks the close, and says whose | `test/day-close.spec.ts` |
+| 10 | §20: closing is the OWNER's and always takes a PIN; the close is audited | `test/day-close.spec.ts` |
+| 11 | Period Lock: a closed day refuses every ordinary document, a second close, and a handover (§20 — no TRN into a closed day) | `test/day-close.spec.ts` |
+| 12 | Period Lock: a month waits for every one of its days, then locks the whole month | `test/day-close.spec.ts` |
+| 13 | Period Reopen: OWNER, PIN and a real reason, kept in the audit log; a month never closed cannot be reopened | `test/day-close.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -315,6 +338,41 @@ Module 13 acceptance criteria:
   inside SLR would pay it twice. The bonus screen shows what is payable per
   employee; the OWNER decides whether to hand it over as BON or to carry it
   into that month's salary.
+- **A shortfall in the till is documented, not written off** (§20). §20 says
+  the difference is recorded with its reason and documented, and
+  `daily_cash_handovers` is where that lives — but it names no document that
+  makes the money go away. So a 200-som shortage stays as 200 som in the
+  seller's account, visible, and the handover explains it. Tell me what should
+  absorb it — an expense, a deduction from that person's salary (§25), a
+  correction — and it becomes one more step in the same transaction.
+- **"A salesperson who worked" means one who raised a confirmed document that
+  day.** §20 asks every seller who worked to compare and hand over; nothing in
+  the knowledge base defines "worked". A confirmed document with that business
+  date is the closest thing the data has to a day's work. Someone who took no
+  cash still hands over: the comparison is zero against zero, no TRN is made,
+  and the day has their record.
+- **The OWNER's own till is not part of the pre-check.** The condition is
+  about salespeople handing money to the centre (§19, §20); asking the OWNER
+  to hand their own money to themselves would block every close for no reason.
+  Their accounts still show on their own day screen.
+- **A month closes when all its days are closed.** Period Lock chains
+  OPEN → CASH_HANDED → DAY_CLOSED → MONTH_CLOSED, so a day left open inside a
+  closed month would be a hole in the same lock. The full month-end
+  reconciliation the specification lists — cash, receivables, payables, stock,
+  P&L, balance — needs the Priority 3 reports, which are not built yet; until
+  they are, the check is the days.
+- **Every draft blocks the day, whatever it is.** Period Lock lists the kinds
+  one by one and ends with "башка unresolved/open документтер", so one rule
+  covers them: a draft on or before that date is unfinished work. An older
+  day's draft blocks today too — otherwise that older day could never be
+  closed either. Work unfinished in a way of its own, like a transfer sent and
+  not received (§12-А.4), still reports itself.
+- **An active reservation does not block the day.** Period Lock mentions an
+  unfinished advance or reservation "статусу ошол күндүн жабылышын талап
+  кылса" — and a live reservation is meant to span days until it expires
+  (§17). Blocking on one would make a day impossible to close for as long as
+  the hold lasts. Say the word if a particular reservation state should hold a
+  day open.
 - **A correction reverses money, and only money — for now.** §27.1 says a
   confirmed document is fixed by a COR, and the Period Lock section lists what
   the record must carry, but neither states what a reversal does to a FIFO

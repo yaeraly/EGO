@@ -266,13 +266,16 @@ describe('Warehouse transfers (Module 3.3, §12-А.4–5)', () => {
         },
       );
 
+      // Drafts of any kind block the day too (Period Lock); what this test
+      // is about is the transfer's own unfinished state.
       const blockers = await businessDays.dayCloseBlockers(new Date());
-      expect(blockers).toHaveLength(1);
-      expect(blockers[0]).toMatchObject({
-        kind: 'TRANSFER_IN_FLIGHT',
-        document_id: id,
-        doc_number,
-      });
+      expect(blockers).toContainEqual(
+        expect.objectContaining({
+          kind: 'TRANSFER_IN_FLIGHT',
+          document_id: id,
+          doc_number,
+        }),
+      );
 
       const { body } = await asOwner(
         http().get('/api/warehouse-transfers/in-flight'),
@@ -290,7 +293,10 @@ describe('Warehouse transfers (Module 3.3, §12-А.4–5)', () => {
 
       await asOwner(http().post(`/api/warehouse-transfers/${id}/receive`)).expect(201);
 
-      expect(await businessDays.dayCloseBlockers(new Date())).toEqual([]);
+      const blockers = await businessDays.dayCloseBlockers(new Date());
+      expect(
+        blockers.filter((blocker) => blocker.kind === 'TRANSFER_IN_FLIGHT'),
+      ).toEqual([]);
     });
 
     it('does not block a day that ended before it was sent', async () => {

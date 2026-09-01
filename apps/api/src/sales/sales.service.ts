@@ -9,7 +9,6 @@ import {
 } from '@prisma/client';
 import { AccountsService } from '../accounts/accounts.service';
 import { AuditService } from '../audit/audit.service';
-import { DayCloseBlocker, DayCloseBlockerRegistry, DayCloseBlockerSource } from '../business-days/day-close-blockers';
 import { Db } from '../common/db';
 import { roundMoney, toDecimal, toOptionalDecimal } from '../common/decimal';
 import { CreditService } from '../credit/credit.service';
@@ -87,12 +86,11 @@ export interface SaleAssessment {
  */
 @Injectable()
 export class SalesService
-  implements DocumentPoster, DayCloseBlockerSource, OnModuleInit
+  implements DocumentPoster, OnModuleInit
 {
   readonly docType = doc_type.SAL;
   /** A Loss Sale posts identically; only its rules differ (§13.6). */
   readonly alsoPosts = [doc_type.LSS] as const;
-  readonly blockerKind = 'SALE_DRAFT';
 
   constructor(
     private readonly prisma: PrismaService,
@@ -108,12 +106,10 @@ export class SalesService
     private readonly confirmation: SaleConfirmService,
     private readonly audit: AuditService,
     private readonly posting: DocumentPostingRegistry,
-    private readonly dayCloseBlockers: DayCloseBlockerRegistry,
   ) {}
 
   onModuleInit(): void {
     this.posting.register(this);
-    this.dayCloseBlockers.register(this);
   }
 
   /**
@@ -389,22 +385,6 @@ export class SalesService
     limit?: number;
   }) {
     return this.repository.findMany(filter);
-  }
-
-  /** A draft sale holds no stock but is unfinished work (Period Lock). */
-  async blockers(businessDate: Date): Promise<DayCloseBlocker[]> {
-    const drafts = await this.repository.openDrafts(this.prisma);
-    return drafts
-      .filter(
-        (sale) =>
-          sale.documents_sales_document_idTodocuments.business_date <= businessDate,
-      )
-      .map((sale) => ({
-        kind: this.blockerKind,
-        document_id: sale.document_id,
-        doc_number: sale.documents_sales_document_idTodocuments.doc_number,
-        detail: 'Сатуу черновик бойдон — тастыкталган же жокко чыгарылган эмес',
-      }));
   }
 
   // ── internals ────────────────────────────────────────────────────────────

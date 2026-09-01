@@ -1012,3 +1012,63 @@ export interface CorrectionEligibility {
   reason: string | null;
   document: CorrectionDocument;
 }
+
+/** One account of a salesperson, on one day (§20). */
+export interface AccountDayLine {
+  account_id: string;
+  name: string;
+  type: string;
+  received: string;
+  paid_out: string;
+  balance: string;
+}
+
+/** A salesperson's own day, as §20 asks it to be shown. */
+export interface DaySummary {
+  business_date: string;
+  user_id: string;
+  full_name: string;
+  day_status: 'OPEN' | 'CASH_HANDED' | 'DAY_CLOSED';
+  sales_count: number;
+  sales_total: string;
+  credit_total: string;
+  returns_total: string;
+  advances_total: string;
+  accounts: AccountDayLine[];
+  cash_expected: string;
+  handover: {
+    id: string;
+    business_date: string;
+    user_id: string;
+    expected_amount: string;
+    actual_amount: string;
+    difference: string;
+    difference_reason: string | null;
+    transfer_doc_id: string | null;
+    handed_at: string;
+  } | null;
+}
+
+/** One thing standing between today and a closed day (Period Lock). */
+export interface DayCloseBlocker {
+  kind: string;
+  document_id: string;
+  doc_number: string;
+  detail: string;
+}
+
+export interface DayClosePreCheck {
+  business_date: string;
+  status: 'OPEN' | 'CASH_HANDED' | 'DAY_CLOSED';
+  unresolved: DayCloseBlocker[];
+  pending_handovers: { user_id: string; full_name: string }[];
+  can_close: boolean;
+}
+
+export interface MonthClosePreCheck {
+  year: number;
+  month: number;
+  status: 'OPEN' | 'MONTH_CLOSED';
+  open_days: { business_date: string; status: string }[];
+  can_close: boolean;
+}

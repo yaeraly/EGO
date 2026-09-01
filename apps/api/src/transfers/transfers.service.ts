@@ -35,24 +35,20 @@ export class TransfersService implements DocumentPoster, OnModuleInit {
     this.posting.register(this);
   }
 
-  /**
-   * Creates the transfer as a DRAFT. No money moves yet: a draft can still be
-   * cancelled, and cancelling is only harmless while nothing has posted.
-   */
-  async create(dto: CreateTransferDto, userId: string): Promise<documents> {
-    const amount = toDecimal(dto.amount, 'amount');
-    if (amount.lessThanOrEqualTo(0)) {
-      throw new BadRequestException('amount must be greater than zero');
-    }
-    if (dto.from_account === dto.to_account) {
+  /** Both accounts exist, are active, are different, and share a currency. */
+  private async assertTransferable(
+    fromAccount: string,
+    toAccount: string,
+  ): Promise<void> {
+    if (fromAccount === toAccount) {
       throw new BadRequestException(
         'from_account and to_account must be different',
       );
     }
 
     const [from, to] = await Promise.all([
-      this.accounts.findOptional(dto.from_account),
-      this.accounts.findOptional(dto.to_account),
+      this.accounts.findOptional(fromAccount),
+      this.accounts.findOptional(toAccount),
     ]);
     if (!from) {
       throw new NotFoundException('from_account does not exist');
@@ -68,6 +64,18 @@ export class TransfersService implements DocumentPoster, OnModuleInit {
     if (!from.is_active || !to.is_active) {
       throw new BadRequestException('Both accounts must be active');
     }
+  }
+
+  /**
+   * Creates the transfer as a DRAFT. No money moves yet: a draft can still be
+   * cancelled, and cancelling is only harmless while nothing has posted.
+   */
+  async create(dto: CreateTransferDto, userId: string): Promise<documents> {
+    const amount = toDecimal(dto.amount, 'amount');
+    if (amount.lessThanOrEqualTo(0)) {
+      throw new BadRequestException('amount must be greater than zero');
+    }
+    await this.assertTransferable(dto.from_account, dto.to_account);
 
     return this.prisma.$transaction(async (tx) => {
       const document = await this.documents.create(tx, {
@@ -86,6 +94,46 @@ export class TransfersService implements DocumentPoster, OnModuleInit {
 
       return document;
     });
+  }
+
+  /**
+   * A transfer raised and posted inside another flow's transaction.
+   *
+   * The daily cash handover is one document made of two facts (§20): the
+   * money moved, and the count was compared. Creating the TRN through the
+   * ordinary two-step route would put them in separate transactions, and a
+   * handover recorded without the money having moved is worse than none.
+   */
+  async createConfirmedWithin(
+    tx: Prisma.TransactionClient,
+    params: {
+      fromAccount: string;
+      toAccount: string;
+      amount: Prisma.Decimal;
+      businessDate: Date;
+      userId: string;
+      comment?: string | null;
+    },
+  ): Promise<documents> {
+    if (params.amount.lessThanOrEqualTo(0)) {
+      throw new BadRequestException('amount must be greater than zero');
+    }
+    await this.assertTransferable(params.fromAccount, params.toAccount);
+
+    const document = await this.documents.create(tx, {
+      docType: doc_type.TRN,
+      businessDate: params.businessDate,
+      userId: params.userId,
+      comment: params.comment ?? null,
+    });
+    await this.repository.insert(tx, {
+      documentId: document.id,
+      fromAccount: params.fromAccount,
+      toAccount: params.toAccount,
+      amount: params.amount,
+    });
+    await this.post(tx, document, params.userId);
+    return this.documents.markConfirmedWithoutPosting(tx, document.id);
   }
 
   /**
