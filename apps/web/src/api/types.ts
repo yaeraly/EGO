@@ -1159,3 +1159,74 @@ export interface BalanceReport {
   difference: string;
   balanced: boolean;
 }
+
+/** ABC, XYZ and margin, per product (§29). */
+export interface ProductAnalysis {
+  product_id: string;
+  sku: string;
+  name: string;
+  category: string | null;
+  qty: string;
+  revenue: string;
+  cogs: string;
+  margin: string;
+  margin_pct: string | null;
+  sales: number;
+  last_sold: string | null;
+  share_pct: string;
+  cumulative_pct: string;
+  abc: 'A' | 'B' | 'C';
+  variation_pct: string | null;
+  xyz: 'X' | 'Y' | 'Z' | null;
+  months: number;
+}
+
+export interface ProductAnalysisReport {
+  from: string;
+  to: string;
+  thresholds: {
+    abc_a_pct: string;
+    abc_b_pct: string;
+    xyz_x_pct: string;
+    xyz_y_pct: string;
+  };
+  totals: {
+    qty: string;
+    revenue: string;
+    cogs: string;
+    margin: string;
+    margin_pct: string | null;
+  };
+  products: ProductAnalysis[];
+}
+
+export interface SalesTrendReport {
+  from: string;
+  to: string;
+  bucket: 'day' | 'week' | 'month';
+  points: {
+    bucket: string;
+    sales: number;
+    revenue: string;
+    cogs: string;
+    margin: string;
+  }[];
+}
+
+export interface ReorderReport {
+  as_of: string;
+  window_days: number;
+  products: {
+    product_id: string;
+    sku: string;
+    name: string;
+    min_stock: string;
+    reorder_point: string;
+    on_hand: string;
+    reserved: string;
+    available: string;
+    inbound: string;
+    sold_recently: string;
+    reason: 'BELOW_MINIMUM' | 'AT_REORDER_POINT';
+  }[];
+}

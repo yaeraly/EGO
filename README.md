@@ -4,14 +4,15 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–15 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–16 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
 returns; defect acts, write-offs and scrap income; operating expenses;
 salaries; the seller's bonus; correction and reversal; the daily cash
-handover, Day Close and the Period Lock; the three financial statements.
-764 API tests and 11 client tests passing.
+handover, Day Close and the Period Lock; the three financial statements;
+ABC, XYZ, margin and what needs ordering.
+783 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -104,6 +105,10 @@ handover, Day Close and the Period Lock; the three financial statements.
 | 15.2 ДДС / Cash Flow, split by kind of flow (§28) | done |
 | 15.3 Баланс, with the check that it holds together (§28, §17-А.5) | done |
 | 15.4 UI: the three statements on one screen | done |
+| 16.1 ABC, XYZ and margin per product (§29) | done |
+| 16.2 Sales by day, week and month (§29) | done |
+| 16.3 What needs ordering (§29, §12-Б.4) | done |
+| 16.4 UI: the three analyses on one screen | done |
 
 Module 0 acceptance criteria:
 
@@ -348,6 +353,23 @@ Module 15 acceptance criteria:
 | 14 | Retained earnings are the profit since the first document, computed, not stored | `test/reports.spec.ts` |
 | 15 | §2: the financial picture is the OWNER's | `test/reports.spec.ts` |
 
+Module 16 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §29: products rank by what they brought in, and each takes the class its running share falls into | `test/analytics.spec.ts` |
+| 2 | The ranking is by value, whatever order the rows arrive in; a product that earned nothing is C | `test/analytics.spec.ts` |
+| 3 | §29: XYZ measures how far demand moves from its own average, in percent | `test/analytics.spec.ts` |
+| 4 | One period is not evidence of steadiness — XYZ is left unset rather than guessed | `test/analytics.spec.ts` |
+| 5 | Margin is a share of what was charged, not of cost; zero revenue has no margin percentage | `test/analytics.spec.ts` |
+| 6 | §35.7: a returned unit is counted as never sold, in the quantity, the revenue and the cost | `test/analytics.spec.ts` |
+| 7 | The cut-offs used are reported with the figures, and the OWNER's settings override them | `test/analytics.spec.ts` |
+| 8 | §29: sales add up by day, by week and by month; an unknown bucket falls back to days | `test/analytics.spec.ts` |
+| 9 | §12-Б.4: a product below its minimum or at its reorder point is listed, a well-stocked one is not | `test/analytics.spec.ts` |
+| 10 | §17: reserved goods count as gone — the list works on available stock | `test/analytics.spec.ts` |
+| 11 | §12-Б.4: what is already on its way is shown, not subtracted | `test/analytics.spec.ts` |
+| 12 | §2: the analyses are the OWNER's | `test/analytics.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -362,6 +384,27 @@ Module 15 acceptance criteria:
   inside SLR would pay it twice. The bonus screen shows what is payable per
   employee; the OWNER decides whether to hand it over as BON or to carry it
   into that month's salary.
+- **The ABC and XYZ cut-offs are the conventional ones, and want your
+  confirmation.** §29 asks for both analyses and states no figures. The
+  seeded values are the textbook ones — A up to 80% of cumulative revenue, B
+  to 95%, and a coefficient of variation of 10% and 25% for X and Y — and the
+  screen prints them under every table so nobody mistakes them for a rule of
+  this business. They are ordinary settings: tell me your numbers, or change
+  them yourself, and the report follows.
+- **ABC ranks by revenue, not by margin.** §29 names "ABC анализ" and
+  "маржиналдык анализ" as two analyses, so the classification uses turnover
+  and the margin is shown beside it on the same row. A product that sells a
+  lot at a thin margin is therefore class A with a low margin percentage —
+  which is the thing worth seeing. Say the word if you want ABC by margin
+  instead, or both.
+- **XYZ is measured month by month.** §29 does not say over what period demand
+  variability is measured. A week is too short for a parts business to say
+  anything, and a year is one number. A product that sold in only one month of
+  the range gets no letter at all rather than a flattering X.
+- **Goods already on their way are shown, not subtracted.** Whether 20 units
+  in transit cover a shortage depends on the lead time, and §29 and §12-Б.4
+  give no rule for it. The list shows the inbound quantity beside the
+  shortfall and leaves the judgment to whoever places the order.
 - **A supplier payable is raised when the order is confirmed, and the goods
   it bought are not an asset until they arrive.** The balance check found
   this: the ledger records the payable against the PUR document, so between

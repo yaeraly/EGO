@@ -98,6 +98,19 @@ export const SettingKey = {
 
   /** Days before a debt falls due to warn the salesperson and OWNER (§16). */
   DEBT_DUE_WARNING_DAYS: 'debt.due_warning_days',
+
+  /**
+   * Where the ABC and XYZ classes divide (§29).
+   *
+   * §29 asks for both analyses and states no cut-offs. These are the
+   * conventional ones — 80/95 of cumulative revenue, and a coefficient of
+   * variation of 10%/25% — seeded so the report works out of the box and
+   * shown on the screen so nobody mistakes them for a rule of this business.
+   */
+  ABC_A_THRESHOLD_PCT: 'analytics.abc.a_threshold_pct',
+  ABC_B_THRESHOLD_PCT: 'analytics.abc.b_threshold_pct',
+  XYZ_X_THRESHOLD_PCT: 'analytics.xyz.x_threshold_pct',
+  XYZ_Y_THRESHOLD_PCT: 'analytics.xyz.y_threshold_pct',
 } as const;
 
 export type SettingKeyName = (typeof SettingKey)[keyof typeof SettingKey];
@@ -247,5 +260,29 @@ export const SEEDED_SETTINGS: SeededSetting[] = [
     value: 3,
     description:
       'Days before a debt falls due to warn the salesperson and the OWNER (§16: "мөөнөтүнө 3 күн калганда").',
+  },
+  {
+    key: SettingKey.ABC_A_THRESHOLD_PCT,
+    value: 80,
+    description:
+      'Cumulative percent of revenue that makes up class A (§29). The conventional 80; §29 states no figure.',
+  },
+  {
+    key: SettingKey.ABC_B_THRESHOLD_PCT,
+    value: 95,
+    description:
+      'Cumulative percent of revenue where class B ends and C begins (§29). The conventional 95; §29 states no figure.',
+  },
+  {
+    key: SettingKey.XYZ_X_THRESHOLD_PCT,
+    value: 10,
+    description:
+      'Coefficient of variation, in percent, at or below which demand counts as steady — class X (§29). The conventional 10.',
+  },
+  {
+    key: SettingKey.XYZ_Y_THRESHOLD_PCT,
+    value: 25,
+    description:
+      'Coefficient of variation, in percent, at or below which demand counts as class Y; above it is Z (§29). The conventional 25.',
   },
 ];
