@@ -31,6 +31,7 @@ import { DiscrepanciesPage, DiscrepancyPage } from './pages/DiscrepanciesPage';
 import { ReceiptListPage } from './pages/ReceiptListPage';
 import { ReceiptWizardPage } from './pages/ReceiptWizardPage';
 import { CategoriesPage } from './pages/CategoriesPage';
+import { VehicleModelsPage } from './pages/VehicleModelsPage';
 import { ProductFormPage } from './pages/ProductFormPage';
 import { ProductPage } from './pages/ProductPage';
 import { DefectsPage, WriteOffsPage } from './pages/DefectsPage';
@@ -96,6 +97,7 @@ function Router() {
         <Route path="/products/:id" element={<ProductPage />} />
         <Route path="/products/:id/edit" element={<ProductFormPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
+        <Route path="/vehicle-models" element={<VehicleModelsPage />} />
         <Route path="/reservations" element={<ReservationsPage />} />
         <Route path="/reservations/new" element={<ReservationFormPage />} />
         <Route path="/reservations/:id" element={<ReservationPage />} />

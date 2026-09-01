@@ -33,6 +33,7 @@ const ENTRIES: Entry[] = [
   { to: '/discrepancies', icon: '⚖️', label: 'Расхождениелер', hint: 'DIF — заказ менен фактынын айырмасы (§8)' },
   { to: '/claims', icon: '📮', label: 'Талаптар', hint: 'CLM — жоготуу үчүн талап (§8.5)', ownerOnly: true },
   { to: '/reservations', icon: '📌', label: 'Броньдор', hint: 'Товарды кармоо, аванс, мөөнөт (§17, §17-А)' },
+  { to: '/vehicle-models', icon: '🛺', label: 'Трицикл моделдери', hint: 'Кайсы тетик кайсы моделге туура келет (§12-Б.8)' },
   { to: '/products', icon: '🔧', label: 'Товар каталогу', hint: 'Товар карточкасы, категория, издөө (§12-Б)' },
   { to: '/returns', icon: '↩️', label: 'Возвраттар', hint: 'Товарды кайтаруу, акча жана карыз (§35)' },
   { to: '/defects', icon: '🛠️', label: 'Брак актылары', hint: 'Текшерүү жана чечим (§36-А.3, §37)' },

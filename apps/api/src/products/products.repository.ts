@@ -22,6 +22,10 @@ export class ProductsRepository {
   search(params: {
     query?: string;
     includeInactive: boolean;
+    /** Only parts recorded as fitting this vehicle model (§12-Б.8). */
+    modelId?: string;
+    /** ...and only the ones somebody has actually checked. */
+    verifiedOnly?: boolean;
   }): Promise<products[]> {
     const text = params.query?.trim();
     return this.prisma.products.findMany({
@@ -44,6 +48,18 @@ export class ProductsRepository {
                   },
                 },
               ],
+            }
+          : {}),
+        // §12-Б.8: "модель боюнча тетик фильтри". Narrowing to checked links
+        // is what makes the filter worth trusting at the counter.
+        ...(params.modelId
+          ? {
+              product_compatibility: {
+                some: {
+                  model_id: params.modelId,
+                  ...(params.verifiedOnly ? { cstatus: 'VERIFIED' as const } : {}),
+                },
+              },
             }
           : {}),
       },

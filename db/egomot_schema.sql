@@ -55,7 +55,8 @@ CREATE TYPE stock_movement_type AS ENUM
 CREATE TYPE transfer_status AS ENUM ('DRAFT', 'SENT', 'RECEIVED', 'CANCELLED'); -- §12-А.4
 
 CREATE TYPE sale_status AS ENUM ('DRAFT', 'CONFIRMED', 'CANCELLED');            -- §14, §27.1
-CREATE TYPE approval_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');        -- §13.5
+CREATE TYPE approval_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');       -- §13.5
+CREATE TYPE compatibility_status AS ENUM ('UNVERIFIED', 'VERIFIED');           -- §12-Б.8
 CREATE TYPE debt_status AS ENUM ('OPEN', 'PARTIALLY_PAID', 'CLOSED');           -- §16
 CREATE TYPE reservation_status AS ENUM ('ACTIVE', 'FULFILLED', 'CANCELLED', 'EXPIRED'); -- §17
 CREATE TYPE advance_status AS ENUM
@@ -327,6 +328,38 @@ CREATE TABLE products (                              -- §12-Б
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Структураланган Compatibility — §12-Б.8 (Приоритет 3). MVP'деги
+-- products.compatibility_notes ордунда калат: эркин жазылган эскертүү менен
+-- текшерилген байланыш эки башка нерсе.
+CREATE TABLE vehicle_models (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  brand      TEXT,
+  name       TEXT NOT NULL,
+  notes      TEXT,
+  is_active  BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT vehicle_models_brand_name_key
+    UNIQUE NULLS NOT DISTINCT (brand, name)
+);
+
+-- UNVERIFIED — айтылган; VERIFIED — ким жана качан текшергени жазылган.
+CREATE TABLE product_compatibility (
+  product_id  UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  model_id    UUID NOT NULL REFERENCES vehicle_models(id) ON DELETE CASCADE,
+  cstatus     compatibility_status NOT NULL DEFAULT 'UNVERIFIED',
+  note        TEXT,
+  verified_by UUID REFERENCES users(id),
+  verified_at TIMESTAMPTZ,
+  created_by  UUID NOT NULL REFERENCES users(id),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (product_id, model_id),
+  CONSTRAINT product_compatibility_verified_check
+    CHECK (cstatus <> 'VERIFIED'
+           OR (verified_by IS NOT NULL AND verified_at IS NOT NULL))
+);
+CREATE INDEX idx_compatibility_model ON product_compatibility(model_id);
 
 CREATE TABLE product_aliases (                       -- §12-Б.2
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),

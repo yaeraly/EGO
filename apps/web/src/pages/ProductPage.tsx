@@ -1,7 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ApiError, api } from '../api/client';
-import type { AliasKind, ProductCard } from '../api/types';
+import type {
+  AliasKind,
+  CompatibilityLink,
+  ProductCard,
+  VehicleModel,
+} from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Money } from '../components/Money';
 import { WAREHOUSE_TYPE_LABEL } from '../components/module3-labels';
@@ -199,6 +204,8 @@ export function ProductPage() {
         <Field label="Акыркы приход" value={purchasing.last_receipt_date ?? '—'} />
       </div>
 
+      <Compatibility productId={product.id} isOwner={hasRole('OWNER')} />
+
       <Aliases
         productId={product.id}
         aliases={card.data.aliases}
@@ -214,6 +221,140 @@ function Field({ label, value }: { label: string; value: string }) {
     <div className="row">
       <span className="muted">{label}</span>
       <span>{value}</span>
+    </div>
+  );
+}
+
+/**
+ * §12-Б.8 — which tricycle models this part fits.
+ *
+ * Anyone at the counter may record a fit, because they are the ones who find
+ * out; only the OWNER can mark it checked, because VERIFIED is the shop's
+ * word to a customer.
+ */
+function Compatibility({
+  productId,
+  isOwner,
+}: {
+  productId: string;
+  isOwner: boolean;
+}) {
+  const links = useApi<CompatibilityLink[]>(
+    `/products/${productId}/compatibility`,
+  );
+  const models = useApi<VehicleModel[]>('/vehicle-models');
+  const [modelId, setModelId] = useState('');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const linked = new Set((links.data ?? []).map((row) => row.model_id));
+
+  async function act(run: () => Promise<unknown>) {
+    setError(null);
+    try {
+      await run();
+      links.reload();
+      models.reload();
+    } catch (e: unknown) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3 className="section-title">Кайсы моделдерге туура келет (§12-Б.8)</h3>
+      <ErrorBanner message={error} />
+      {links.data?.length === 0 && (
+        <p className="muted" style={{ margin: 0 }}>
+          Азырынча бир да модель байланышкан эмес.
+        </p>
+      )}
+
+      {(links.data ?? []).map((row) => (
+        <div className="row" key={row.model_id}>
+          <span>
+            {[row.brand, row.model_name].filter(Boolean).join(' ')}
+            {row.note && <span className="muted"> · {row.note}</span>}
+          </span>
+          <span className="inline">
+            <span className={`badge ${row.status === 'VERIFIED' ? 'ok' : 'neutral'}`}>
+              {row.status === 'VERIFIED'
+                ? `текшерилди · ${row.verified_by_name ?? ''}`
+                : 'текшерилген жок'}
+            </span>
+            {isOwner && (
+              <button
+                type="button"
+                className="secondary"
+                onClick={() =>
+                  act(() =>
+                    api(
+                      `/products/${productId}/compatibility/${row.model_id}/verify`,
+                      { method: row.status === 'VERIFIED' ? 'DELETE' : 'POST' },
+                    ),
+                  )
+                }
+              >
+                {row.status === 'VERIFIED' ? 'Белгини алуу' : 'Текшердим'}
+              </button>
+            )}
+            <button
+              type="button"
+              className="danger"
+              onClick={() =>
+                act(() =>
+                  api(`/products/${productId}/compatibility/${row.model_id}`, {
+                    method: 'DELETE',
+                  }),
+                )
+              }
+            >
+              Өчүрүү
+            </button>
+          </span>
+        </div>
+      ))}
+
+      <form
+        className="inline"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void act(async () => {
+            await api(`/products/${productId}/compatibility`, {
+              method: 'POST',
+              body: {
+                model_id: modelId,
+                ...(note.trim() ? { note: note.trim() } : {}),
+              },
+            });
+            setModelId('');
+            setNote('');
+          });
+        }}
+      >
+        <select
+          value={modelId}
+          onChange={(e) => setModelId(e.target.value)}
+          required
+        >
+          <option value="">Модель тандаңыз</option>
+          {(models.data ?? [])
+            .filter((model) => !linked.has(model.id))
+            .map((model) => (
+              <option key={model.id} value={model.id}>
+                {[model.brand, model.name].filter(Boolean).join(' ')}
+              </option>
+            ))}
+        </select>
+        <input
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="эскертүү"
+        />
+        <button type="submit" disabled={!modelId}>
+          Кошуу
+        </button>
+      </form>
     </div>
   );
 }

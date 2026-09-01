@@ -1453,3 +1453,27 @@ export interface HealthReport {
   counts: { urgent: number; warning: number; info: number };
   items: HealthItem[];
 }
+
+/** A tricycle model parts are matched against (§12-Б.8). */
+export interface VehicleModel {
+  id: string;
+  brand: string | null;
+  name: string;
+  notes: string | null;
+  is_active: boolean;
+  /** How many parts are recorded as fitting it, and how many are checked. */
+  products: number;
+  verified: number;
+}
+
+export interface CompatibilityLink {
+  product_id: string;
+  model_id: string;
+  brand: string | null;
+  model_name: string;
+  status: 'UNVERIFIED' | 'VERIFIED';
+  note: string | null;
+  verified_by: string | null;
+  verified_by_name: string | null;
+  verified_at: string | null;
+}

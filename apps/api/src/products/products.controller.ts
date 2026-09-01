@@ -41,8 +41,17 @@ export class ProductsController {
     @Query('q') query?: string,
     @Query('include_inactive', new ParseBoolPipe({ optional: true }))
     includeInactive?: boolean,
+    /** §12-Б.8 — the parts recorded as fitting one vehicle model. */
+    @Query('model_id') modelId?: string,
+    @Query('verified_only', new ParseBoolPipe({ optional: true }))
+    verifiedOnly?: boolean,
   ): Promise<products[]> {
-    return this.products.search(query, includeInactive ?? false);
+    return this.products.search({
+      query,
+      includeInactive: includeInactive ?? false,
+      modelId,
+      verifiedOnly,
+    });
   }
 
   @Get(':id')

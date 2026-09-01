@@ -70,8 +70,18 @@ export class ProductsService {
     return product;
   }
 
-  search(query: string | undefined, includeInactive = false): Promise<products[]> {
-    return this.repository.search({ query, includeInactive });
+  search(params: {
+    query?: string;
+    includeInactive?: boolean;
+    modelId?: string;
+    verifiedOnly?: boolean;
+  }): Promise<products[]> {
+    return this.repository.search({
+      query: params.query,
+      includeInactive: params.includeInactive ?? false,
+      modelId: params.modelId,
+      verifiedOnly: params.verifiedOnly,
+    });
   }
 
   async findOne(id: string): Promise<products> {

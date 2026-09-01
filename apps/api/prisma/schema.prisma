@@ -712,6 +712,7 @@ model products {
   inventory_lines              inventory_lines[]
   lot_items                    lot_items[]
   product_aliases              product_aliases[]
+  product_compatibility        product_compatibility[]
   suppliers                    suppliers?               @relation(fields: [main_supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_products_supplier")
   product_categories           product_categories?      @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   purchase_items               purchase_items[]
@@ -1027,46 +1028,48 @@ model suppliers {
 }
 
 model users {
-  id                                                         String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  full_name                                                  String
-  phone                                                      String?                   @unique
-  role                                                       user_role
-  pin_hash                                                   String
-  password_hash                                              String
-  status                                                     user_status               @default(ACTIVE)
-  max_discount_pct                                           Decimal                   @default(0) @db.Decimal(5, 2)
-  bonus_rate_pct                                             Decimal                   @default(0) @db.Decimal(5, 2)
-  base_salary                                                Decimal                   @default(0) @db.Decimal(14, 2)
-  created_at                                                 DateTime                  @default(now()) @db.Timestamptz(6)
-  updated_at                                                 DateTime                  @default(now()) @db.Timestamptz(6)
-  audit_log                                                  audit_log[]
-  bonus_payments                                             bonus_payments[]
-  bonuses                                                    bonuses[]
-  business_days                                              business_days[]
-  business_months                                            business_months[]
-  credit_overrides                                           credit_overrides[]
-  daily_cash_handovers                                       daily_cash_handovers[]
-  defect_acts                                                defect_acts[]
-  documents_documents_confirmed_byTousers                    documents[]               @relation("documents_confirmed_byTousers")
-  documents_documents_created_byTousers                      documents[]               @relation("documents_created_byTousers")
-  handover_acts_handover_acts_from_userTousers               handover_acts[]           @relation("handover_acts_from_userTousers")
-  handover_acts_handover_acts_to_userTousers                 handover_acts[]           @relation("handover_acts_to_userTousers")
-  idempotency_keys                                           idempotency_keys[]
-  inventory_lines                                            inventory_lines[]
-  notifications                                              notifications[]
-  payment_accounts                                           payment_accounts[]
-  purchase_status_history                                    purchase_status_history[]
-  reservations                                               reservations[]
-  salary_payments                                            salary_payments[]
-  sales_sales_owner_approval_userTousers                     sales[]                   @relation("sales_owner_approval_userTousers")
-  sales_sales_salespersonTousers                             sales[]                   @relation("sales_salespersonTousers")
-  sales_plans_sales_plans_created_byTousers                  sales_plans[]             @relation("sales_plans_created_byTousers")
-  sales_plans_sales_plans_user_idTousers                     sales_plans[]             @relation("sales_plans_user_idTousers")
-  security_log                                               security_log[]
-  settings                                                   settings[]
-  warehouse_transfers_warehouse_transfers_received_byTousers warehouse_transfers[]     @relation("warehouse_transfers_received_byTousers")
-  warehouse_transfers_warehouse_transfers_sent_byTousers     warehouse_transfers[]     @relation("warehouse_transfers_sent_byTousers")
-  warehouses                                                 warehouses[]
+  id                                                             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  full_name                                                      String
+  phone                                                          String?                   @unique
+  role                                                           user_role
+  pin_hash                                                       String
+  password_hash                                                  String
+  status                                                         user_status               @default(ACTIVE)
+  max_discount_pct                                               Decimal                   @default(0) @db.Decimal(5, 2)
+  bonus_rate_pct                                                 Decimal                   @default(0) @db.Decimal(5, 2)
+  base_salary                                                    Decimal                   @default(0) @db.Decimal(14, 2)
+  created_at                                                     DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                                                     DateTime                  @default(now()) @db.Timestamptz(6)
+  audit_log                                                      audit_log[]
+  bonus_payments                                                 bonus_payments[]
+  bonuses                                                        bonuses[]
+  business_days                                                  business_days[]
+  business_months                                                business_months[]
+  credit_overrides                                               credit_overrides[]
+  daily_cash_handovers                                           daily_cash_handovers[]
+  defect_acts                                                    defect_acts[]
+  documents_documents_confirmed_byTousers                        documents[]               @relation("documents_confirmed_byTousers")
+  documents_documents_created_byTousers                          documents[]               @relation("documents_created_byTousers")
+  handover_acts_handover_acts_from_userTousers                   handover_acts[]           @relation("handover_acts_from_userTousers")
+  handover_acts_handover_acts_to_userTousers                     handover_acts[]           @relation("handover_acts_to_userTousers")
+  idempotency_keys                                               idempotency_keys[]
+  inventory_lines                                                inventory_lines[]
+  notifications                                                  notifications[]
+  payment_accounts                                               payment_accounts[]
+  product_compatibility_product_compatibility_created_byTousers  product_compatibility[]   @relation("product_compatibility_created_byTousers")
+  product_compatibility_product_compatibility_verified_byTousers product_compatibility[]   @relation("product_compatibility_verified_byTousers")
+  purchase_status_history                                        purchase_status_history[]
+  reservations                                                   reservations[]
+  salary_payments                                                salary_payments[]
+  sales_sales_owner_approval_userTousers                         sales[]                   @relation("sales_owner_approval_userTousers")
+  sales_sales_salespersonTousers                                 sales[]                   @relation("sales_salespersonTousers")
+  sales_plans_sales_plans_created_byTousers                      sales_plans[]             @relation("sales_plans_created_byTousers")
+  sales_plans_sales_plans_user_idTousers                         sales_plans[]             @relation("sales_plans_user_idTousers")
+  security_log                                                   security_log[]
+  settings                                                       settings[]
+  warehouse_transfers_warehouse_transfers_received_byTousers     warehouse_transfers[]     @relation("warehouse_transfers_received_byTousers")
+  warehouse_transfers_warehouse_transfers_sent_byTousers         warehouse_transfers[]     @relation("warehouse_transfers_sent_byTousers")
+  warehouses                                                     warehouses[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -1246,6 +1249,38 @@ model sales_plans {
 
   @@unique([period_year, period_month, user_id], map: "sales_plans_period_user_key")
   @@index([period_year, period_month], map: "idx_sales_plans_period")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model product_compatibility {
+  product_id                                     String               @db.Uuid
+  model_id                                       String               @db.Uuid
+  cstatus                                        compatibility_status @default(UNVERIFIED)
+  note                                           String?
+  verified_by                                    String?              @db.Uuid
+  verified_at                                    DateTime?            @db.Timestamptz(6)
+  created_by                                     String               @db.Uuid
+  created_at                                     DateTime             @default(now()) @db.Timestamptz(6)
+  users_product_compatibility_created_byTousers  users                @relation("product_compatibility_created_byTousers", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vehicle_models                                 vehicle_models       @relation(fields: [model_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products                                       products             @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_product_compatibility_verified_byTousers users?               @relation("product_compatibility_verified_byTousers", fields: [verified_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([product_id, model_id])
+  @@index([model_id], map: "idx_compatibility_model")
+}
+
+model vehicle_models {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brand                 String?
+  name                  String
+  notes                 String?
+  is_active             Boolean                 @default(true)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime                @default(now()) @db.Timestamptz(6)
+  product_compatibility product_compatibility[]
+
+  @@unique([brand, name])
 }
 
 enum account_type {
@@ -1500,4 +1535,9 @@ enum approval_status {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum compatibility_status {
+  UNVERIFIED
+  VERIFIED
 }

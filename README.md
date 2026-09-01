@@ -4,7 +4,7 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–20 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–21 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
@@ -13,8 +13,8 @@ salaries; the seller's bonus; correction and reversal; the daily cash
 handover, Day Close and the Period Lock; the three financial statements;
 ABC, XYZ, margin and what needs ordering; plans, KPI and the reports by
 salesperson and by customer; the OWNER's dashboard; the purchasing
-assistant; the business health board.
-842 API tests and 11 client tests passing.
+assistant; the business health board; structured compatibility.
+857 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -122,6 +122,10 @@ assistant; the business health board.
 | 19.3 UI: change the suggestion and turn it into an order (§33) | done |
 | 20.1 The daily list of what needs doing (§34) | done |
 | 20.2 UI: the board, ordered by how pressing each item is | done |
+| 21.1 Vehicle models, and a part linked to many of them (§12-Б.8) | done |
+| 21.2 VERIFIED / UNVERIFIED, with who checked and when | done |
+| 21.3 Finding the parts for a model, checked ones only if wanted | done |
+| 21.4 UI: the model list, the filter, and the panel on the product card | done |
 
 Module 0 acceptance criteria:
 
@@ -459,6 +463,23 @@ Module 20 acceptance criteria:
 | 12 | Most pressing first, each counted, and every item says where to go | `test/health.spec.ts` |
 | 13 | §2, §34: the board is the OWNER's | `test/health.spec.ts` |
 
+Module 21 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §12-Б.8: the model list is the OWNER's to keep and everyone's to read | `test/compatibility.spec.ts` |
+| 2 | A model may have no brand; the same name twice is refused, the same name under a brand is not | `test/compatibility.spec.ts` |
+| 3 | A model is archived rather than deleted, and archived ones are hidden by default | `test/compatibility.spec.ts` |
+| 4 | §12-Б.8: anyone may record that a part fits, and it starts UNVERIFIED | `test/compatibility.spec.ts` |
+| 5 | The same pair is recorded once; an archived or unknown model is refused | `test/compatibility.spec.ts` |
+| 6 | Every model a part is recorded against is listed, and a link can be withdrawn — on the record (§27) | `test/compatibility.spec.ts` |
+| 7 | §12-Б.8: VERIFIED is the OWNER's alone, and keeps who gave it and when | `test/compatibility.spec.ts` |
+| 8 | Taking the mark back forgets who had checked it | `test/compatibility.spec.ts` |
+| 9 | Each model counts what is recorded against it and what is checked | `test/compatibility.spec.ts` |
+| 10 | §12-Б.8: the catalogue narrows to one model, and again to what is checked | `test/compatibility.spec.ts` |
+| 11 | §12-Б.9.6: the free-text search still finds a part by the words people type | `test/compatibility.spec.ts` |
+| 12 | §12-Б.8: the MVP's `compatibility_notes` field stays exactly where it was | `test/compatibility.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -473,6 +494,22 @@ Module 20 acceptance criteria:
   inside SLR would pay it twice. The bonus screen shows what is payable per
   employee; the OWNER decides whether to hand it over as BON or to carry it
   into that month's salary.
+- **Recording a fit is everyone's; confirming it is the OWNER's.** §12-Б.8
+  asks for the VERIFIED/UNVERIFIED status and does not say who sets it. The
+  person at the counter is who finds out what actually fits, and making them
+  wait for the OWNER to write it down would lose the knowledge — so anyone may
+  record a link, and it is UNVERIFIED until checked. VERIFIED is the shop's
+  word to a customer, so it is the OWNER's to give, and the link keeps who
+  gave it and when. Say the word if a senior salesperson should be able to
+  verify too.
+- **The structured links do not replace the MVP's notes field.** §12-Б.8 keeps
+  `compatibility_notes` as free text in the search (§12-Б.9.6), and it is
+  untouched: a note somebody typed and a link somebody checked are different
+  things, and the search reads both.
+- **A vehicle model is a brand and a name, and nothing else.** §12-Б.8 asks
+  for the many-to-many link, the status and the filter, and describes no
+  further attributes — no year ranges, no engine sizes — so none are invented.
+  The brand is optional, because plenty of tricycles arrive without one.
 - **The health board reads on demand; §39's alerts push.** §34 asks for a
   daily list of what needs attention and §39 for automatic warnings. They
   overlap in subject and differ in kind, so the board raises no notifications:

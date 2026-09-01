@@ -40,6 +40,7 @@ import { ReservationsModule } from './reservations/reservations.module';
 import { DefectsModule } from './defects/defects.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { BonusesModule } from './bonuses/bonuses.module';
+import { CompatibilityModule } from './compatibility/compatibility.module';
 import { CorrectionsModule } from './corrections/corrections.module';
 import { DayCloseModule } from './day-close/day-close.module';
 import { PlansModule } from './plans/plans.module';
@@ -88,6 +89,7 @@ enableBigIntJson();
     ExpensesModule,
     SalariesModule,
     BonusesModule,
+    CompatibilityModule,
     CorrectionsModule,
     DayCloseModule,
     PlansModule,
