@@ -111,6 +111,19 @@ export const SettingKey = {
   ABC_B_THRESHOLD_PCT: 'analytics.abc.b_threshold_pct',
   XYZ_X_THRESHOLD_PCT: 'analytics.xyz.x_threshold_pct',
   XYZ_Y_THRESHOLD_PCT: 'analytics.xyz.y_threshold_pct',
+
+  /**
+   * The purchasing assistant (§33).
+   *
+   * §33 names the inputs and gives no numbers: how far back to measure how
+   * fast something sells, and how long an order should last once it arrives.
+   * The lead time is not here — §6 records a date against every logistics
+   * status, so the system measures it rather than being told.
+   */
+  PURCHASE_VELOCITY_WINDOW_DAYS: 'purchase.velocity_window_days',
+  PURCHASE_COVER_DAYS: 'purchase.cover_days',
+  /** Used only until a first delivery has been received and timed (§6). */
+  PURCHASE_FALLBACK_LEAD_DAYS: 'purchase.fallback_lead_days',
 } as const;
 
 export type SettingKeyName = (typeof SettingKey)[keyof typeof SettingKey];
@@ -284,5 +297,23 @@ export const SEEDED_SETTINGS: SeededSetting[] = [
     value: 25,
     description:
       'Coefficient of variation, in percent, at or below which demand counts as class Y; above it is Z (§29). The conventional 25.',
+  },
+  {
+    key: SettingKey.PURCHASE_VELOCITY_WINDOW_DAYS,
+    value: 90,
+    description:
+      'How far back the purchasing assistant measures how fast a product sells (§33). §33 states no window; 90 days is a quarter of trading.',
+  },
+  {
+    key: SettingKey.PURCHASE_COVER_DAYS,
+    value: 60,
+    description:
+      'How long an order should last once it arrives, in days (§33). §33 states no figure — set it to how often you want to be ordering.',
+  },
+  {
+    key: SettingKey.PURCHASE_FALLBACK_LEAD_DAYS,
+    value: null,
+    description:
+      'Delivery time in days, used only until a first batch has been received and timed (§6, §33). UNCONFIGURED — until then the assistant says the lead time is unknown rather than guessing one.',
   },
 ];

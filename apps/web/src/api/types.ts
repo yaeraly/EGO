@@ -1391,3 +1391,46 @@ export interface Dashboard {
   }[];
   business_plan_pct: string | null;
 }
+
+/** One line of the purchasing assistant's suggestion (§33). */
+export interface ProductAdvice {
+  product_id: string;
+  sku: string;
+  name: string;
+  supplier_id: string | null;
+  supplier_name: string | null;
+  on_hand: string;
+  reserved: string;
+  available: string;
+  inbound: string;
+  daily_rate: string;
+  monthly_rate: string;
+  sold_in_window: string;
+  lead_days: number;
+  abc: 'A' | 'B' | 'C';
+  xyz: 'X' | 'Y' | 'Z' | null;
+  margin_pct: string | null;
+  last_price_cny: string | null;
+  estimated_cost_cny: string | null;
+  needed: string;
+  suggested: string;
+  cover_days: string | null;
+  priority: 'URGENT' | 'SOON' | 'LATER' | 'HOLD';
+  reason: string;
+}
+
+export interface PurchaseAdviceReport {
+  as_of: string;
+  window_days: number;
+  cover_days: number;
+  lead_days: number | null;
+  lead_days_source: 'MEASURED' | 'SETTING' | 'UNKNOWN';
+  batches_measured: number;
+  budget: {
+    estimated_cny: string;
+    available_cny: string;
+    shortfall_cny: string;
+  };
+  order: ProductAdvice[];
+  hold: ProductAdvice[];
+}

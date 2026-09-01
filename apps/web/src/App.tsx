@@ -10,6 +10,7 @@ import { DayClosePage } from './pages/DayClosePage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { PerformancePage } from './pages/PerformancePage';
+import { PurchaseAdvicePage } from './pages/PurchaseAdvicePage';
 import { ReportsPage } from './pages/ReportsPage';
 import { CurrencyExchangePage } from './pages/CurrencyExchangePage';
 import { LoginPage } from './pages/LoginPage';
@@ -114,6 +115,7 @@ function Router() {
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/performance" element={<PerformancePage />} />
+        <Route path="/purchase-advice" element={<PurchaseAdvicePage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/products/:id" element={<ProductStockPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />

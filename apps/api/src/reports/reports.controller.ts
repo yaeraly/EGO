@@ -13,6 +13,10 @@ import {
 } from './analytics.service';
 import { Dashboard, DashboardService } from './dashboard.service';
 import {
+  PurchaseAdviceReport,
+  PurchaseAdviceService,
+} from './purchase-advice.service';
+import {
   CustomerReport,
   PerformanceService,
   SellerReport,
@@ -51,6 +55,7 @@ export class ReportsController {
     private readonly analytics: AnalyticsService,
     private readonly performance: PerformanceService,
     private readonly dashboard: DashboardService,
+    private readonly advice: PurchaseAdviceService,
   ) {}
 
   /**
@@ -138,6 +143,17 @@ export class ReportsController {
       // §30 states 90 days; the query may narrow or widen it.
       Number.isFinite(days) && days > 0 && days <= 3650 ? Math.trunc(days) : 90,
     );
+  }
+
+  /**
+   * What to order next, and how much (§33).
+   *
+   * The OWNER changes what they like and turns it into a purchase order;
+   * §33 asks for a suggestion, not a decision.
+   */
+  @Get('purchase-advice')
+  purchaseAdvice(): Promise<PurchaseAdviceReport> {
+    return this.advice.advise();
   }
 
   /** What needs ordering (§29, §12-Б.4). */

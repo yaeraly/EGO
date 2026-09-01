@@ -4,7 +4,7 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–18 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–19 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
@@ -12,8 +12,9 @@ returns; defect acts, write-offs and scrap income; operating expenses;
 salaries; the seller's bonus; correction and reversal; the daily cash
 handover, Day Close and the Period Lock; the three financial statements;
 ABC, XYZ, margin and what needs ordering; plans, KPI and the reports by
-salesperson and by customer; the OWNER's dashboard.
-813 API tests and 11 client tests passing.
+salesperson and by customer; the OWNER's dashboard; the purchasing
+assistant.
+828 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -116,6 +117,9 @@ salesperson and by customer; the OWNER's dashboard.
 | 17.4 UI: sellers, customers and the plan on one screen | done |
 | 18.1 The OWNER's one screen, assembled from the reports (§32) | done |
 | 18.2 UI: the dashboard, and the OWNER lands on it | done |
+| 19.1 What to order and how much, from measured figures (§33) | done |
+| 19.2 Priority, estimated cost and what the yuan till holds (§33) | done |
+| 19.3 UI: change the suggestion and turn it into an order (§33) | done |
 
 Module 0 acceptance criteria:
 
@@ -415,6 +419,26 @@ Module 18 acceptance criteria:
 | 11 | §24, §31: the salespeople against their plan, and the business against its own | `test/dashboard.spec.ts` |
 | 12 | §2, §32: the dashboard is the OWNER's | `test/dashboard.spec.ts` |
 
+Module 19 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §33's own example: 12 on the shelf, 18 a month, 30 days out → the shortfall over the horizon | `test/purchase-advice.spec.ts` |
+| 2 | §12-Б.4: what is already on its way is not ordered twice | `test/purchase-advice.spec.ts` |
+| 3 | §17: a reservation is demand already asked for, not stock on hand | `test/purchase-advice.spec.ts` |
+| 4 | Never a negative order; whole units, rounded up | `test/purchase-advice.spec.ts` |
+| 5 | §12-Б.4: a slow month never argues away the OWNER's minimum | `test/purchase-advice.spec.ts` |
+| 6 | Stock that never sells has no cover period — it has a different problem | `test/purchase-advice.spec.ts` |
+| 7 | §33: urgent means it runs out before an order could arrive; what earns most breaks ties | `test/purchase-advice.spec.ts` |
+| 8 | The lead time is unknown until something has arrived — it is never guessed | `test/purchase-advice.spec.ts` |
+| 9 | The OWNER's figure stands in until a first batch has been timed | `test/purchase-advice.spec.ts` |
+| 10 | §6, §7: the lead time is measured from the order to its receipt | `test/purchase-advice.spec.ts` |
+| 11 | §33: the suggestion covers the wait plus the cover period, and says so in words | `test/purchase-advice.spec.ts` |
+| 12 | What is already covered is held back, with the reason written out | `test/purchase-advice.spec.ts` |
+| 13 | §33: the order is priced in yuan and weighed against the yuan till | `test/purchase-advice.spec.ts` |
+| 14 | §29: the ABC and XYZ classes travel onto the line | `test/purchase-advice.spec.ts` |
+| 15 | §2: the assistant is the OWNER's | `test/purchase-advice.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -429,6 +453,32 @@ Module 18 acceptance criteria:
   inside SLR would pay it twice. The bonus screen shows what is payable per
   employee; the OWNER decides whether to hand it over as BON or to carry it
   into that month's salary.
+- **The assistant suggests; it does not forecast.** §33 lists seasonality
+  among its inputs, and seasonality needs years of history and a stated
+  method. With months of trading, a seasonal factor would be noise dressed up
+  as knowledge, so there is none. Everything the assistant does use is
+  measured from documents, and the reason for every line is printed beside it
+  so the arithmetic can be checked on paper. When there are two or three years
+  of sales, tell me how you want the season handled and it can be added.
+- **The lead time is measured from the order to its receipt, not from the
+  logistics stages.** §6 records a date against each of the sixteen stages,
+  but a person moves those by hand and one nobody remembered to click would
+  silently lengthen every future suggestion. A confirmed receipt is the day
+  the goods were really there (§7). The median of past deliveries is used, so
+  one batch stuck in customs does not decide today's order. Until a first
+  batch has been received the assistant says the lead time is unknown, or
+  uses `purchase.fallback_lead_days` if you set one — it never invents a
+  number. Note that a measured zero is reported as measured: if your history
+  was entered with the order and the receipt on the same day, the figure will
+  read 0 and the batch count beside it is how you can tell.
+- **How far back to look, and how long an order should last, are yours.**
+  §33 names neither. `purchase.velocity_window_days` is seeded at 90 — a
+  quarter of trading — and `purchase.cover_days` at 60. Set the cover period
+  to how often you want to be placing orders.
+- **A product nobody has ordered yet still has somewhere to order from.** The
+  supplier of the last order decides it, and failing that the product card's
+  main supplier (§12-Б.5). With neither, the line is shown with its quantity
+  but no order can be raised from it, and the screen says so.
 - **The dashboard recalculates nothing.** Every figure comes from the service
   that owns it — the statements for money earned, the analyses for products,
   the credit module for what is overdue — so a summary can never disagree with

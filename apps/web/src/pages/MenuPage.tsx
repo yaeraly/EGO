@@ -19,6 +19,7 @@ const ENTRIES: Entry[] = [
   { to: '/day-close', icon: '🌙', label: 'Күндү жабуу', hint: 'Кассаны өткөрүү жана күн/ай жабуу (§20, Period Lock)' },
   { to: '/sales', icon: '🧾', label: 'Менин сатууларым', hint: 'Өз сатууларым жана кассаларым (§2, §19)' },
   { to: '/approvals', icon: '✅', label: 'Скидка бекитүүлөрү', hint: 'Лимиттен ашкан скидка (§13.5)', ownerOnly: true },
+  { to: '/purchase-advice', icon: '🧠', label: 'Сатып алуу жардамчысы', hint: 'Эмнени, канча заказ кылуу керек (§33)', ownerOnly: true },
   { to: '/purchases', icon: '📦', label: 'Сатып алуулар', hint: 'Кытайдан заказ, логистика (§4, §6)' },
   { to: '/receipts', icon: '📥', label: 'Приходдор', hint: 'Кабыл алуу, өздүк нарк (§7, §9)' },
   { to: '/accounts', icon: '💰', label: 'Кассалар', hint: 'Баланстар, валюта сатып алуу (CEX)' },
