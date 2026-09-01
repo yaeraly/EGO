@@ -8,6 +8,7 @@ import { BonusesPage } from './pages/BonusesPage';
 import { CorrectionsPage } from './pages/CorrectionsPage';
 import { DayClosePage } from './pages/DayClosePage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { PerformancePage } from './pages/PerformancePage';
 import { ReportsPage } from './pages/ReportsPage';
 import { CurrencyExchangePage } from './pages/CurrencyExchangePage';
 import { LoginPage } from './pages/LoginPage';
@@ -106,6 +107,7 @@ function Router() {
         <Route path="/day-close" element={<DayClosePage />} />
         <Route path="/reports" element={<ReportsPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/performance" element={<PerformancePage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/stock/products/:id" element={<ProductStockPage />} />
         <Route path="/warehouses" element={<WarehousesPage />} />

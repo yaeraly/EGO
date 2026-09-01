@@ -940,6 +940,27 @@ CREATE TABLE bonus_payments (                  -- BON
   amount      NUMERIC(14,2) NOT NULL CHECK (amount > 0)
 );
 
+-- План жана KPI — §24. user_id NULL = бүтүндөй бизнестин планы.
+-- Ар бир максат өзүнчө NULL боло алат: коюлбаган максат «план жок» дегенди
+-- билдирет, «0%» эмес. NULLS NOT DISTINCT — бир айга бизнес боюнча эки план
+-- түзүлбөшү үчүн (PostgreSQL 15+).
+CREATE TABLE sales_plans (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  period_year   INT NOT NULL,
+  period_month  INT NOT NULL CHECK (period_month BETWEEN 1 AND 12),
+  user_id       UUID REFERENCES users(id),
+  revenue_target NUMERIC(14,2) CHECK (revenue_target IS NULL OR revenue_target >= 0),
+  margin_target  NUMERIC(14,2) CHECK (margin_target IS NULL OR margin_target >= 0),
+  new_customers_target INT CHECK (new_customers_target IS NULL OR new_customers_target >= 0),
+  comment       TEXT,
+  created_by    UUID NOT NULL REFERENCES users(id),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT sales_plans_period_user_key
+    UNIQUE NULLS NOT DISTINCT (period_year, period_month, user_id)
+);
+CREATE INDEX idx_sales_plans_period ON sales_plans(period_year, period_month);
+
 -- ============================================================================
 -- 13. ИНВЕНТАРИЗАЦИЯ, СКЛАД ӨТКӨРҮҮ, КОРРЕКЦИЯ  (§21, §22, §27.1, Period Lock)
 -- ============================================================================

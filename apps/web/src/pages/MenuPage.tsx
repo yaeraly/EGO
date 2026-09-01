@@ -13,6 +13,7 @@ interface Entry {
 /** Everything the bottom bar has no room for. */
 const ENTRIES: Entry[] = [
   { to: '/reports', icon: '📊', label: 'Отчеттор', hint: 'ОПУ, ДДС жана Баланс (§28)', ownerOnly: true },
+  { to: '/performance', icon: '🏆', label: 'Сатуучулар жана кардарлар', hint: 'План, KPI, рейтинг (§24, §30, §31)', ownerOnly: true },
   { to: '/analytics', icon: '📈', label: 'Аналитика', hint: 'ABC, XYZ, маржа, заказ тизмеси (§29)', ownerOnly: true },
   { to: '/day-close', icon: '🌙', label: 'Күндү жабуу', hint: 'Кассаны өткөрүү жана күн/ай жабуу (§20, Period Lock)' },
   { to: '/sales', icon: '🧾', label: 'Менин сатууларым', hint: 'Өз сатууларым жана кассаларым (§2, §19)' },

@@ -42,6 +42,7 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { BonusesModule } from './bonuses/bonuses.module';
 import { CorrectionsModule } from './corrections/corrections.module';
 import { DayCloseModule } from './day-close/day-close.module';
+import { PlansModule } from './plans/plans.module';
 import { ReportsModule } from './reports/reports.module';
 import { SalariesModule } from './salaries/salaries.module';
 import { ReturnsModule } from './returns/returns.module';
@@ -89,6 +90,7 @@ enableBigIntJson();
     BonusesModule,
     CorrectionsModule,
     DayCloseModule,
+    PlansModule,
     ReportsModule,
     WriteOffsModule,
     InventoriesModule,

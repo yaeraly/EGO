@@ -4,15 +4,16 @@ Business management system. NestJS + Prisma + PostgreSQL API, React + Vite PWA c
 
 ## Status
 
-**Modules 0–16 complete.** Foundation; capital and currency; purchasing and
+**Modules 0–17 complete.** Foundation; capital and currency; purchasing and
 counterparty payments; receipt, landed cost, LOT/FIFO and warehouses;
 customers, pricing, sales, payment and debt; the product catalogue;
 reservations and customer advances; inventory and warehouse handover;
 returns; defect acts, write-offs and scrap income; operating expenses;
 salaries; the seller's bonus; correction and reversal; the daily cash
 handover, Day Close and the Period Lock; the three financial statements;
-ABC, XYZ, margin and what needs ordering.
-783 API tests and 11 client tests passing.
+ABC, XYZ, margin and what needs ordering; plans, KPI and the reports by
+salesperson and by customer.
+801 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -109,6 +110,10 @@ ABC, XYZ, margin and what needs ordering.
 | 16.2 Sales by day, week and month (§29) | done |
 | 16.3 What needs ordering (§29, §12-Б.4) | done |
 | 16.4 UI: the three analyses on one screen | done |
+| 17.1 Monthly plans per person and for the business (§24) | done |
+| 17.2 By salesperson: result, plan, bonus and till (§31) | done |
+| 17.3 By customer, and who has stopped coming (§30) | done |
+| 17.4 UI: sellers, customers and the plan on one screen | done |
 
 Module 0 acceptance criteria:
 
@@ -370,6 +375,27 @@ Module 16 acceptance criteria:
 | 11 | §12-Б.4: what is already on its way is shown, not subtracted | `test/analytics.spec.ts` |
 | 12 | §2: the analyses are the OWNER's | `test/analytics.spec.ts` |
 
+Module 17 acceptance criteria:
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | §24: achievement is a percentage of a target, and there is none without a target | `test/performance.spec.ts` |
+| 2 | §31: the average sale exists only when something was sold | `test/performance.spec.ts` |
+| 3 | §30: purchase frequency is the span between the first and last purchase over the gaps; one purchase has none | `test/performance.spec.ts` |
+| 4 | §24: the plan is the OWNER's, for one person or for the business as a whole | `test/performance.spec.ts` |
+| 5 | A month's plan is replaced, not duplicated, and both the setting and the change are audited | `test/performance.spec.ts` |
+| 6 | A plan with no target in it is refused; a plan can be withdrawn | `test/performance.spec.ts` |
+| 7 | §31: sales, margin, margin share and average sale per salesperson | `test/performance.spec.ts` |
+| 8 | §16, §31: credit sales are counted and what is owed on them is stated | `test/performance.spec.ts` |
+| 9 | §24: a new customer counts for whoever first sold to them, once; Walk-in is never new (§11.1) | `test/performance.spec.ts` |
+| 10 | §24: the plan sits beside the result, per person and for the business; an unset target shows no percentage | `test/performance.spec.ts` |
+| 11 | §19, §23, §31: each salesperson's own tills and their bonus by status | `test/performance.spec.ts` |
+| 12 | §30: what a customer bought, earned and still owes; the Walk-in row is not a customer | `test/performance.spec.ts` |
+| 13 | §30: who brought the most money and who brought the most margin, ranked apart | `test/performance.spec.ts` |
+| 14 | §17, §30: how each customer's reservations ended | `test/performance.spec.ts` |
+| 15 | §30: customers who used to buy and have stopped — a one-time buyer is not one of them | `test/performance.spec.ts` |
+| 16 | §2: both reports are the OWNER's | `test/performance.spec.ts` |
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -384,6 +410,28 @@ Module 16 acceptance criteria:
   inside SLR would pay it twice. The bonus screen shows what is payable per
   employee; the OWNER decides whether to hand it over as BON or to carry it
   into that month's salary.
+- **A plan is monthly, and the report reads the month the period ends in.**
+  §24 says "айлык/мезгилдик план" without defining the period, so the plan
+  carries a year and a month — the same shape as a salary period (§25). A
+  report run across several months therefore shows the last month's target
+  beside the whole period's result, which would misread; the screen defaults
+  to the current month for that reason. Tell me if you want plans over
+  arbitrary ranges instead.
+- **A new customer counts for the salesperson who first sold to them.** §24
+  lists "жаңы кардарлар" as something a seller is measured on but does not say
+  who gets the credit when several people serve the same customer. The first
+  confirmed sale in that customer's whole history decides it, and only once —
+  a second sale to the same person is not a second new customer. The Walk-in
+  row is never new: it stands for everyone unregistered (§11.1).
+- **"Previously active" means at least two purchases.** §30 asks for
+  "акыркы 90 күндө сатып албаган мурда активдүү кардарлар" and does not define
+  active. Someone who bought once and never returned was never a regular, and
+  listing them would bury the ones worth a phone call. Two purchases is the
+  line; say the word if you want a different one.
+- **A plan is edited in place, not corrected.** §27.1 governs posted facts —
+  documents that moved money or stock. A plan is a target: changing it moves
+  nothing, so it is updated rather than reversed. Every set and every change
+  is in the audit log with the old and the new value.
 - **The ABC and XYZ cut-offs are the conventional ones, and want your
   confirmation.** §29 asks for both analyses and states no figures. The
   seeded values are the textbook ones — A up to 80% of cumulative revenue, B

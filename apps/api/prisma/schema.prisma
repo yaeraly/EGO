@@ -1060,6 +1060,8 @@ model users {
   salary_payments                                            salary_payments[]
   sales_sales_owner_approval_userTousers                     sales[]                   @relation("sales_owner_approval_userTousers")
   sales_sales_salespersonTousers                             sales[]                   @relation("sales_salespersonTousers")
+  sales_plans_sales_plans_created_byTousers                  sales_plans[]             @relation("sales_plans_created_byTousers")
+  sales_plans_sales_plans_user_idTousers                     sales_plans[]             @relation("sales_plans_user_idTousers")
   security_log                                               security_log[]
   settings                                                   settings[]
   warehouse_transfers_warehouse_transfers_received_byTousers warehouse_transfers[]     @relation("warehouse_transfers_received_byTousers")
@@ -1224,6 +1226,26 @@ model sale_payment_lines {
   sales            sales            @relation(fields: [sale_id], references: [document_id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([sale_id], map: "idx_sale_payment_lines_sale")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sales_plans {
+  id                                  String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  period_year                         Int
+  period_month                        Int
+  user_id                             String?  @db.Uuid
+  revenue_target                      Decimal? @db.Decimal(14, 2)
+  margin_target                       Decimal? @db.Decimal(14, 2)
+  new_customers_target                Int?
+  comment                             String?
+  created_by                          String   @db.Uuid
+  created_at                          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                          DateTime @default(now()) @db.Timestamptz(6)
+  users_sales_plans_created_byTousers users    @relation("sales_plans_created_byTousers", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users_sales_plans_user_idTousers    users?   @relation("sales_plans_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([period_year, period_month, user_id], map: "sales_plans_period_user_key")
+  @@index([period_year, period_month], map: "idx_sales_plans_period")
 }
 
 enum account_type {

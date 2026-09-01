@@ -1230,3 +1230,104 @@ export interface ReorderReport {
     reason: 'BELOW_MINIMUM' | 'AT_REORDER_POINT';
   }[];
 }
+
+/** A user as the OWNER's screens list them. */
+export interface UserSummary {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  role: UserRole;
+  status: 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
+}
+
+/** A monthly plan (§24). user_id null = the whole business. */
+export interface PlanView {
+  id: string;
+  period_year: number;
+  period_month: number;
+  user_id: string | null;
+  full_name: string | null;
+  revenue_target: string | null;
+  margin_target: string | null;
+  new_customers_target: number | null;
+  comment: string | null;
+}
+
+export interface PlanAchievement {
+  revenue_pct: string | null;
+  margin_pct: string | null;
+  new_customers_pct: string | null;
+}
+
+export interface PlanTargets {
+  revenue_target: string | null;
+  margin_target: string | null;
+  new_customers_target: number | null;
+}
+
+/** One salesperson against their plan (§31, §24). */
+export interface SellerPerformance {
+  user_id: string;
+  full_name: string;
+  sales: number;
+  revenue: string;
+  cogs: string;
+  margin: string;
+  margin_pct: string | null;
+  average_sale: string | null;
+  credit_sales: number;
+  credit_revenue: string;
+  new_customers: number;
+  plan: PlanTargets | null;
+  achievement: PlanAchievement;
+  bonus: Record<string, string>;
+  accounts: { name: string; currency: string; balance: string }[];
+}
+
+export interface SellerReport {
+  from: string;
+  to: string;
+  business_plan: PlanTargets | null;
+  business_achievement: PlanAchievement;
+  totals: {
+    sales: number;
+    revenue: string;
+    margin: string;
+    new_customers: number;
+  };
+  sellers: SellerPerformance[];
+}
+
+/** One customer's record (§30). */
+export interface CustomerPerformance {
+  customer_id: string;
+  name: string;
+  ctype: string;
+  category: string;
+  purchases: number;
+  revenue: string;
+  cogs: string;
+  margin: string;
+  margin_pct: string | null;
+  debt: string;
+  last_purchase: string | null;
+  frequency_days: string | null;
+  reservations: Record<string, number>;
+}
+
+export interface CustomerReport {
+  from: string;
+  to: string;
+  customers: CustomerPerformance[];
+  top_by_revenue: CustomerPerformance[];
+  top_by_margin: CustomerPerformance[];
+  lapsed_since: string;
+  lapsed: {
+    customer_id: string;
+    name: string;
+    phone: string | null;
+    purchases: number;
+    revenue: string;
+    last_purchase: string;
+  }[];
+}

@@ -12,6 +12,11 @@ import {
   SalesTrendReport,
 } from './analytics.service';
 import {
+  CustomerReport,
+  PerformanceService,
+  SellerReport,
+} from './performance.service';
+import {
   BalanceReport,
   CashFlowReport,
   ProfitAndLossReport,
@@ -43,6 +48,7 @@ export class ReportsController {
   constructor(
     private readonly reports: ReportsService,
     private readonly analytics: AnalyticsService,
+    private readonly performance: PerformanceService,
   ) {}
 
   /** ДДС — Cash Flow. */
@@ -95,6 +101,30 @@ export class ReportsController {
         ? bucket
         : 'day';
     return this.analytics.salesTrend(period(from, to), unit);
+  }
+
+  /** Each salesperson against their plan (§31, §24). */
+  @Get('sellers')
+  sellers(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ): Promise<SellerReport> {
+    return this.performance.sellers(period(from, to));
+  }
+
+  /** Each customer, and the ones who have stopped coming (§30). */
+  @Get('customers')
+  customers(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('lapsed_days') lapsedDays?: string,
+  ): Promise<CustomerReport> {
+    const days = Number(lapsedDays);
+    return this.performance.customers(
+      period(from, to),
+      // §30 states 90 days; the query may narrow or widen it.
+      Number.isFinite(days) && days > 0 && days <= 3650 ? Math.trunc(days) : 90,
+    );
   }
 
   /** What needs ordering (§29, §12-Б.4). */
