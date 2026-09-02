@@ -686,7 +686,6 @@ model products {
   barcode                      String?
   oem_code                     String?
   description                  String?
-  images                       Json                     @default("[]")
   weight_kg                    Decimal?                 @db.Decimal(10, 3)
   length_cm                    Decimal?                 @db.Decimal(10, 2)
   width_cm                     Decimal?                 @db.Decimal(10, 2)
@@ -715,6 +714,7 @@ model products {
   lot_items                    lot_items[]
   product_aliases              product_aliases[]
   product_compatibility        product_compatibility[]
+  product_images               product_images[]
   suppliers                    suppliers?               @relation(fields: [main_supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_products_supplier")
   product_categories           product_categories?      @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   purchase_items               purchase_items[]
@@ -1060,6 +1060,7 @@ model users {
   payment_accounts                                               payment_accounts[]
   product_compatibility_product_compatibility_created_byTousers  product_compatibility[]   @relation("product_compatibility_created_byTousers")
   product_compatibility_product_compatibility_verified_byTousers product_compatibility[]   @relation("product_compatibility_verified_byTousers")
+  product_images                                                 product_images[]
   purchase_status_history                                        purchase_status_history[]
   reservations                                                   reservations[]
   salary_payments                                                salary_payments[]
@@ -1288,6 +1289,23 @@ model vehicle_models {
 model product_sequences {
   prefix      String @id
   last_number Int    @default(0)
+}
+
+model product_images {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id   String   @db.Uuid
+  sort_order   Int
+  content_type String
+  width        Int
+  height       Int
+  byte_size    Int
+  data         Bytes
+  uploaded_by  String   @db.Uuid
+  uploaded_at  DateTime @default(now()) @db.Timestamptz(6)
+  products     products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users    @relation(fields: [uploaded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([product_id, sort_order], map: "idx_product_images_product")
 }
 
 enum account_type {

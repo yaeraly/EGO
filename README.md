@@ -15,7 +15,7 @@ ABC, XYZ, margin and what needs ordering; plans, KPI and the reports by
 salesperson and by customer; the OWNER's dashboard; the purchasing
 assistant; the business health board; structured compatibility. The system
 issues the SKU and the barcode, and a product card carries its photos.
-881 API tests and 11 client tests passing.
+882 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -128,7 +128,7 @@ issues the SKU and the barcode, and a product card carries its photos.
 | 21.3 Finding the parts for a model, checked ones only if wanted | done |
 | 21.4 UI: the model list, the filter, and the panel on the product card | done |
 | — The system issues the SKU and the barcode (§12-Б.9.1) | done |
-| — Product photos on disk, with the card and the form to manage them (§12-Б.1) | done |
+| — Product photos in the database, with the card and the form to manage them (§12-Б.1) | done |
 
 Module 0 acceptance criteria:
 
@@ -488,15 +488,16 @@ Product photo acceptance criteria (§12-Б.1):
 | # | Criterion | Covered by |
 |---|---|---|
 | 1 | A photo is stored, listed and served back, re-encoded rather than copied | `test/product-images.spec.ts` |
-| 2 | A picture bigger than the catalogue needs is shrunk on the way in | `test/product-images.spec.ts` |
-| 3 | A file that is not an image is refused, and so is an upload with no file | `test/product-images.spec.ts` |
-| 4 | A file far too big to be a photo is refused before anything decodes it | `test/product-images.spec.ts` |
-| 5 | §2: adding, ordering and removing are the OWNER's; everyone reads | `test/product-images.spec.ts` |
-| 6 | Eight pictures is the limit for one product | `test/product-images.spec.ts` |
-| 7 | The main photo is chosen by moving one to the front, losing nothing | `test/product-images.spec.ts` |
-| 8 | Removing drops the row and the file together | `test/product-images.spec.ts` |
-| 9 | One product cannot serve another product's photo | `test/product-images.spec.ts` |
-| 10 | §26: who added and who removed a picture is in the audit log | `test/product-images.spec.ts` |
+| 2 | The bytes are in the database, so a `pg_dump` carries them | `test/product-images.spec.ts` |
+| 3 | A picture bigger than the catalogue needs is shrunk on the way in | `test/product-images.spec.ts` |
+| 4 | A file that is not an image is refused, and so is an upload with no file | `test/product-images.spec.ts` |
+| 5 | A file far too big to be a photo is refused before anything decodes it | `test/product-images.spec.ts` |
+| 6 | §2: adding, ordering and removing are the OWNER's; everyone reads | `test/product-images.spec.ts` |
+| 7 | Eight pictures is the limit for one product | `test/product-images.spec.ts` |
+| 8 | The main photo is chosen by moving one to the front, losing nothing | `test/product-images.spec.ts` |
+| 9 | Removing takes the bytes out of the database with the row | `test/product-images.spec.ts` |
+| 10 | One product cannot serve another product's photo | `test/product-images.spec.ts` |
+| 11 | §26: who added and who removed a picture is in the audit log | `test/product-images.spec.ts` |
 
 A product's photos are the OWNER's to add, and that is settled: §12-Б.1 asks
 the card to carry a picture of the part without saying who puts it there, and

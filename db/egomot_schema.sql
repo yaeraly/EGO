@@ -317,7 +317,6 @@ CREATE TABLE products (                              -- §12-Б
   barcode      TEXT,
   oem_code     TEXT,
   description  TEXT,
-  images       JSONB NOT NULL DEFAULT '[]',
   weight_kg    NUMERIC(10,3),                        -- приходдо милдеттүү (§9.1) — validation
   length_cm    NUMERIC(10,2),
   width_cm     NUMERIC(10,2),
@@ -386,6 +385,22 @@ CREATE TABLE product_aliases (                       -- §12-Б.2
   kind       TEXT NOT NULL DEFAULT 'OTHER'           -- RU/KG/SUPPLIER/KEYWORD/OEM
 );
 CREATE INDEX idx_aliases_search ON product_aliases USING gin (to_tsvector('simple', alias));
+
+-- Товардын сүрөттөрү (§12-Б.1) — байттары менен базанын өзүндө, ошондуктан
+-- pg_dump аларды кошо алат жана база менен сүрөттөр ажырап калбайт.
+CREATE TABLE product_images (                        -- §12-Б.1
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id   UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  sort_order   INT NOT NULL,                         -- 0 = негизги сүрөт
+  content_type TEXT NOT NULL,
+  width        INT NOT NULL,
+  height       INT NOT NULL,
+  byte_size    INT NOT NULL,
+  data         BYTEA NOT NULL,
+  uploaded_by  UUID NOT NULL REFERENCES users(id),
+  uploaded_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_product_images_product ON product_images(product_id, sort_order);
 
 CREATE TABLE warehouses (                            -- §12-А.1
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

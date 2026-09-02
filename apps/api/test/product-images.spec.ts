@@ -1,9 +1,7 @@
-import { readdir } from 'node:fs/promises';
 import { INestApplication } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import sharp from 'sharp';
 import request from 'supertest';
-import { ImageStorageService } from '../src/media/image-storage.service';
 import { createTestApp } from './app-harness';
 import { Module2Context, resetModule2 } from './module2-harness';
 
@@ -78,6 +76,20 @@ describe('Product photos (§12-Б.1)', () => {
       expect(await sharp(served.body).metadata()).toEqual(
         expect.objectContaining({ format: 'jpeg', width: 60, height: 40 }),
       );
+    });
+
+    it('keeps the bytes in the database, not on a disk somewhere', async () => {
+      const { body: images } = await upload(product(), await photo()).expect(
+        201,
+      );
+
+      const row = await prisma.product_images.findUniqueOrThrow({
+        where: { id: images[0].id },
+        select: { data: true, content_type: true, byte_size: true },
+      });
+      expect(row.content_type).toBe('image/jpeg');
+      expect(row.data.length).toBe(row.byte_size);
+      expect(row.byte_size).toBe(images[0].bytes);
     });
 
     it('shrinks a photo bigger than the catalogue needs', async () => {
@@ -165,20 +177,19 @@ describe('Product photos (§12-Б.1)', () => {
   });
 
   describe('Removing', () => {
-    it('drops the row and the file together', async () => {
+    it('takes the bytes out of the database with the row', async () => {
       const { body: images } = await upload(product(), await photo()).expect(
         201,
       );
       const id = images[0].id as string;
-      const directory = app.get(ImageStorageService).directory;
-      expect(await readdir(directory)).toContain(`${id}.jpg`);
+      expect(await prisma.product_images.count()).toBe(1);
 
       const { body: left } = await asOwner(
         http().delete(`/api/products/${product()}/images/${id}`),
       ).expect(200);
 
       expect(left).toEqual([]);
-      expect(await readdir(directory)).not.toContain(`${id}.jpg`);
+      expect(await prisma.product_images.count()).toBe(0);
       await asOwner(
         http().get(`/api/products/${product()}/images/${id}`),
       ).expect(404);
@@ -217,11 +228,7 @@ describe('Product photos (§12-Б.1)', () => {
       ).expect(200);
 
       const entries = await prisma.audit_log.findMany({
-        where: {
-          entity: 'products',
-          entity_id: product(),
-          action: { startsWith: 'PRODUCT_IMAGE_' },
-        },
+        where: { entity: 'product_images', entity_id: images[0].id },
         orderBy: { created_at: 'asc' },
         select: { action: true, user_id: true },
       });

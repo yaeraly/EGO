@@ -19,7 +19,8 @@ import {
   CurrentUser,
 } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
-import { MAX_UPLOAD_BYTES, StoredImage } from './image-storage.service';
+import { MAX_UPLOAD_BYTES } from './image-encoder';
+import { ProductImageMeta } from './product-images.repository';
 import { ProductImagesService } from './product-images.service';
 
 /**
@@ -35,7 +36,7 @@ export class ProductImagesController {
   @Get()
   list(
     @Param('productId', ParseUUIDPipe) productId: string,
-  ): Promise<StoredImage[]> {
+  ): Promise<ProductImageMeta[]> {
     return this.images.list(productId);
   }
 
@@ -51,13 +52,13 @@ export class ProductImagesController {
     @Param('imageId', ParseUUIDPipe) imageId: string,
     @Res() response: Response,
   ): Promise<void> {
-    const bytes = await this.images.read(productId, imageId);
-    response.setHeader('Content-Type', 'image/jpeg');
-    response.setHeader('Content-Length', bytes.length);
+    const image = await this.images.read(productId, imageId);
+    response.setHeader('Content-Type', image.contentType);
+    response.setHeader('Content-Length', image.data.length);
     // The id is a UUID that never points at different bytes, so a browser
     // may keep it as long as it likes.
     response.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
-    response.end(bytes);
+    response.end(image.data);
   }
 
   @Roles(user_role.OWNER)
@@ -72,7 +73,7 @@ export class ProductImagesController {
     @Param('productId', ParseUUIDPipe) productId: string,
     @UploadedFile() file: Express.Multer.File | undefined,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<StoredImage[]> {
+  ): Promise<ProductImageMeta[]> {
     return this.images.add(productId, file, user.id);
   }
 
@@ -84,7 +85,7 @@ export class ProductImagesController {
     @Param('productId', ParseUUIDPipe) productId: string,
     @Param('imageId', ParseUUIDPipe) imageId: string,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<StoredImage[]> {
+  ): Promise<ProductImageMeta[]> {
     return this.images.makeFirst(productId, imageId, user.id);
   }
 
@@ -94,7 +95,7 @@ export class ProductImagesController {
     @Param('productId', ParseUUIDPipe) productId: string,
     @Param('imageId', ParseUUIDPipe) imageId: string,
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<StoredImage[]> {
+  ): Promise<ProductImageMeta[]> {
     return this.images.remove(productId, imageId, user.id);
   }
 }
