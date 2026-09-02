@@ -5,6 +5,7 @@ import {
   doc_type,
   documents,
   fifo_layer_source,
+  purchase_status,
   receipt_status,
   stock_movement_type,
 } from '@prisma/client';
@@ -13,6 +14,8 @@ import { roundMoney } from '../common/decimal';
 import { DocumentsService } from '../documents/documents.service';
 import { splitAgainstDebt, SupplierLedgerService } from '../ledgers/ledgers.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { PurchasePayableService } from '../purchases/purchase-payable.service';
+import { PurchasesRepository } from '../purchases/purchases.repository';
 import { StockService } from '../stock/stock.service';
 import { WarehousesService } from '../warehouses/warehouses.service';
 import { DiscrepanciesService } from '../discrepancies/discrepancies.service';
@@ -51,6 +54,8 @@ export class ReceiptConfirmService {
     private readonly stock: StockService,
     private readonly warehouses: WarehousesService,
     private readonly ledger: SupplierLedgerService,
+    private readonly purchases: PurchasesRepository,
+    private readonly purchasePayable: PurchasePayableService,
     private readonly discrepancies: DiscrepanciesService,
     private readonly audit: AuditService,
   ) {}
@@ -100,10 +105,19 @@ export class ReceiptConfirmService {
     // 4. §18, §8.4, §12-А.6 — stock, split between MAIN and DEFECT.
     await this.createLayers(tx, document, receipt, costing.lines, lotItemByLine);
 
-    // 5. §4.3, §10.2 — an advance the supplier holds goes against this order.
+    // 5. §6.5 — goods cannot arrive without having left the supplier, so the
+    // debt for them is due by now even if nobody moved the stage along.
+    await this.purchasePayable.recognise(
+      tx,
+      receipt.purchase_id,
+      userId,
+      'RECEIPT',
+    );
+
+    // 6. §4.3, §10.2 — an advance the supplier holds goes against this order.
     const prepayment = await this.applyPrepayment(tx, document, receipt);
 
-    // 6. §8 — ordered against received, and what that means financially.
+    // 7. §8 — ordered against received, and what that means financially.
     const discrepancies = await this.discrepancies.raiseForReceipt(tx, {
       receipt,
       receiptDocument: document,
@@ -112,6 +126,14 @@ export class ReceiptConfirmService {
     });
 
     await this.repository.setStatus(tx, document.id, receipt_status.RECEIVED);
+    // §6, stage 15 — the batch itself has now been received. Without this the
+    // shipment would stay "in transit" on the Balance while its goods are
+    // already in stock, and be counted twice.
+    await this.purchases.setLogisticsStatus(
+      tx,
+      receipt.purchase_id,
+      purchase_status.RECEIVED,
+    );
 
     await this.audit.log(
       {

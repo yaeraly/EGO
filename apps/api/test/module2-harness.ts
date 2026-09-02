@@ -132,6 +132,24 @@ export function documentFlow(
  * Puts KGS in, then buys CNY at a stated rate — the real route yuan take into
  * the business (§43: capital → currency purchase → supplier).
  */
+/**
+ * Moves a confirmed order to "left the supplier's warehouse" (§6, stage 5).
+ *
+ * That is the moment the debt for the goods falls due (§6.5), so any test
+ * about a supplier payable has to get the order there first.
+ */
+export async function shipPurchase(
+  app: INestApplication,
+  token: string,
+  purchaseId: string,
+): Promise<void> {
+  await request(app.getHttpServer())
+    .post(`/api/purchases/${purchaseId}/status`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ status: 'LEFT_SUPPLIER', reason: 'shipped' })
+    .expect(201);
+}
+
 export async function buyCurrency(
   app: INestApplication,
   ctx: Module2Context,

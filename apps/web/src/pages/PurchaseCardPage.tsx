@@ -3,7 +3,12 @@ import { Link, useParams } from 'react-router-dom';
 import { ApiError, api } from '../api/client';
 import type { PurchaseCard, PurchaseStatus } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-import { LogisticsBadge, PaymentBadge, STATUS_LABEL } from '../components/Badges';
+import {
+  LogisticsBadge,
+  PaymentBadge,
+  STATUS_LABEL,
+  payableIsDue,
+} from '../components/Badges';
 import { Money, isNegative } from '../components/Money';
 import { ErrorBanner, Loading, Page } from '../components/Page';
 import { useApi } from '../hooks/useApi';
@@ -109,6 +114,13 @@ export function PurchaseCardPage() {
 
       <div className="card">
         <h3 className="section-title">Төлөмдөр</h3>
+        {!payableIsDue(data.logistics.status) && (
+          <p className="banner info" style={{ margin: 0 }}>
+            Товар поставщиктин складынан чыга элек — азырынча карыз жок (§6.5).
+            Азыр төлөнгөн акча аванс болуп жазылат жана товар келгенде карызга
+            эсептелет (§4.3).
+          </p>
+        )}
         {data.payments.length === 0 && <p className="muted">Төлөм жок.</p>}
         <div className="lines">
           {data.payments.map((payment) => (

@@ -14,8 +14,9 @@ handover, Day Close and the Period Lock; the three financial statements;
 ABC, XYZ, margin and what needs ordering; plans, KPI and the reports by
 salesperson and by customer; the OWNER's dashboard; the purchasing
 assistant; the business health board; structured compatibility. The system
-issues the SKU and the barcode, and a product card carries its photos.
-882 API tests and 11 client tests passing.
+issues the SKU and the barcode, a product card carries its photos, and the
+supplier debt falls due when the goods leave their warehouse (§6.5).
+889 API tests and 11 client tests passing.
 
 | Task | State |
 |---|---|
@@ -32,7 +33,7 @@ issues the SKU and the barcode, and a product card carries its photos.
 | 2.1 Product master (minimal), suppliers, cargo companies | done |
 | 2.2 Purchase (PUR) — order, lines, CNY totals | done |
 | 2.3 Logistics status machine (§6, 16 stages) | done |
-| 2.4 Supplier ledger, payable recognition, payment status | done |
+| 2.4 Supplier ledger, payable recognition (§6.5), payment status | done |
 | 2.5 Supplier payment (SPY) — currency FIFO, FX result | done |
 | 2.6 Cargo payment (CPY) — USD till or som at a stated rate | done |
 | 2.7 Alerts (§39, the part Module 2 can observe) | done |
@@ -154,7 +155,7 @@ Module 2 acceptance criteria:
 
 | # | Criterion | Covered by |
 |---|---|---|
-| 1 | A confirmed order books the payable in CNY at the reference rate | `test/supplier-payments.spec.ts` |
+| 1 | An order shipped from the supplier books the payable in CNY at the reference rate (§6.5) | `test/supplier-payments.spec.ts`, `test/payable-recognition.spec.ts` |
 | 2 | A payment consumes currency FIFO and records the FX result (§10.2) | `test/supplier-payments.spec.ts` — debt at 13.00 paid from 13.00 + 14.00 layers → −5 000 KGS |
 | 3 | Paying more than the debt leaves an advance, not a negative debt (§4.3) | `test/supplier-payments.spec.ts` |
 | 4 | Logistics moves one step for staff, any step for the OWNER, audited (§6) | `test/purchases.spec.ts` |
@@ -163,6 +164,18 @@ Module 2 acceptance criteria:
 
 Module 2 also added the payment-status read model (`test/purchase-view.spec.ts`)
 and the §39 alerts (`test/notifications.spec.ts`).
+
+When the supplier debt falls due (§6.5):
+
+| # | Criterion | Covered by |
+|---|---|---|
+| 1 | An order still being gathered owes nobody anything | `test/payable-recognition.spec.ts` |
+| 2 | The debt appears when the goods leave the supplier's warehouse (§6, stage 5) | `test/payable-recognition.spec.ts` |
+| 3 | Once, however many stages follow — and on a jump straight past that stage | `test/payable-recognition.spec.ts` |
+| 4 | A stage set by mistake and moved back leaves the debt standing (§27.1) | `test/payable-recognition.spec.ts` |
+| 5 | A receipt recognises it too: goods cannot arrive without having shipped | `test/prepayment-apply.spec.ts` |
+| 6 | Money paid before the shipment is an advance, applied at the receipt (§4.3) | `test/prepayment-apply.spec.ts` |
+| 7 | §42.3: the shipment we are owed faces the debt, so the Balance holds throughout | `test/payable-recognition.spec.ts` |
 
 Module 4 acceptance criteria:
 
@@ -504,6 +517,16 @@ the card to carry a picture of the part without saying who puts it there, and
 the OWNER has decided the photos follow the rest of the product card, which is
 reference data the OWNER keeps (§2).
 
+The supplier debt falls due when the goods leave the partner's warehouse (§6,
+stage 5) — the OWNER's rule, and what the code now does. The knowledge base
+does not state the moment: §4.2 describes the debt and §4.3 the prepayment,
+neither of them the point at which one arises. An order is a list of parts we
+have asked for and commits nobody; once it is shipped we owe for the goods and
+the partner owes us the shipment, which is the asset facing the debt on the
+Balance until the receipt turns it into stock. §4.3 reads the same way: an
+advance is applied "at the next Receipt", which is only a rule worth having if
+paying before the goods arrive is the ordinary case.
+
 ### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
@@ -633,17 +656,6 @@ reference data the OWNER keeps (§2).
   in transit cover a shortage depends on the lead time, and §29 and §12-Б.4
   give no rule for it. The list shows the inbound quantity beside the
   shortfall and leaves the judgment to whoever places the order.
-- **A supplier payable is raised when the order is confirmed, and the goods
-  it bought are not an asset until they arrive.** The balance check found
-  this: the ledger records the payable against the PUR document, so between
-  ordering and receiving there is a liability with nothing on the asset side,
-  and the balance does not hold by exactly that amount. The knowledge base
-  never says when the payable arises — §4.2 describes the debt and §4.3 the
-  prepayment, neither the moment. Two ways to settle it, and it is your call:
-  the payable arises at receipt (§7), which is when the goods and the debt
-  both become real; or it stays at the order and the balance gains an
-  "ordered, not yet received" asset line, which §28's list does not have. I
-  have not changed either module — this needs the rule first.
 - **The balance is the position now, not on a chosen date.** What is on the
   shelf, what customers owe, and what is held against advances are current
   figures; an advance's applications are a running total with no per-
@@ -863,7 +875,7 @@ reference data the OWNER keeps (§2).
   extra units do not enter stock, because §8.8 gives no cost rule and says the
   goods enter "per a documented decision". The decision workflow is not built.
 - **The payable is recognised in CNY at the reference rate of the day the
-  order is confirmed** (§4.2, §10.1), and a later payment's FX result is
+  goods leave the supplier** (§4.2, §6.5, §10.1), and a later payment's FX result is
   measured against that. The knowledge base states the debt is a yuan debt and
   §10.2 requires an FX result, but does not say which rate anchors it. The
   supplier ledger therefore carries a weighted-average KGS value over the open

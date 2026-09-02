@@ -79,6 +79,8 @@ export interface BalanceReport extends BalanceTotals {
   inventory_total: string;
   customer_receivables: string;
   customer_advances: string;
+  /** §6.5 — shipped by the supplier, not yet received. */
+  goods_in_transit: string;
   supplier_payable: { name: string; balance_cny: string; kgs: string }[];
   supplier_payable_total_kgs: string;
   supplier_receivable_total_kgs: string;
@@ -262,6 +264,7 @@ export class ReportsService {
       cargo,
       claims,
       capital,
+      goodsInTransit,
       firstDate,
     ] = await Promise.all([
       this.repository.cashOnHand(asOf),
@@ -272,6 +275,7 @@ export class ReportsService {
       this.repository.cargoBalances(),
       this.repository.openClaims(),
       this.repository.capital(),
+      this.repository.goodsInTransit(),
       this.repository.firstBusinessDate(),
     ]);
 
@@ -313,6 +317,7 @@ export class ReportsService {
       inventoryMain: main.plus(otherStock),
       inventoryDefect: defect,
       customerReceivables: receivables,
+      goodsInTransit,
       supplierReceivables: supplierReceivable,
       cargoReceivables: cargoReceivable,
       openClaims: claimTotal,
@@ -346,6 +351,7 @@ export class ReportsService {
       inventory_total: money(main.plus(otherStock).plus(defect)),
       customer_receivables: money(receivables),
       customer_advances: money(advances),
+      goods_in_transit: money(goodsInTransit),
       supplier_payable: owing(suppliers).map((row) => ({
         name: row.name,
         balance_cny: money(row.balance_cny.abs()),

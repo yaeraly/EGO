@@ -44,6 +44,19 @@ export class SupplierLedgerRepository {
    * debt as negative, and negating once here keeps every caller from having to
    * remember the sign.
    */
+  /** Whether one document already wrote an entry of this type. */
+  async hasEntry(
+    tx: Db,
+    documentId: string,
+    entryType: string,
+  ): Promise<boolean> {
+    const found = await tx.supplier_ledger.findFirst({
+      where: { document_id: documentId, entry_type: entryType },
+      select: { id: true },
+    });
+    return found !== null;
+  }
+
   /**
    * The raw sum of one entry stream, in the ledger's own sign convention:
    * negative means we owe, positive means they do.

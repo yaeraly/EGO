@@ -213,22 +213,29 @@ describe('Prepayment applied at receipt (Module 3.7, §4.3, §10.2)', () => {
     });
   });
 
-  it('does not use an advance against a debt that is already settled', async () => {
+  it('treats money paid before the goods ship as an advance (§6.5)', async () => {
     await buyCny('20000.00', '13.00');
 
     const purchaseId = await confirmedPurchase(app, ctx, {
       lines: [{ productIndex: 0, qty: '10.00', priceCny: '100.00' }],
     });
-    // Paid in full against this order, then a separate advance.
+    // Both payments happen while the order is still being gathered, so there
+    // is no debt for either of them to close — an order is not a debt (§6.5).
     await pay('1000.00', purchaseId);
     await pay('500.00');
+    expect(await sumOf('PREPAYMENT')).toBe('1500.00');
+    expect(await sumOf('PAYABLE')).toBe('0.00');
 
     await receiveInFull(purchaseId, '13.000000');
 
-    expect(await sumOf('PREPAYMENT_APPLY')).toBe('0.00');
+    // The receipt is proof the goods shipped: the 1 000 debt appears and the
+    // advance meets it, leaving the other 500 where it was.
+    expect(await sumOf('PAYABLE')).toBe('-1000.00');
+    expect(await sumOf('PREPAYMENT_APPLY')).toBe('-1000.00');
     const { body: ledger } = await asOwner(
       http().get(`/api/suppliers/${ctx.supplierId}/ledger`),
     ).expect(200);
+    expect(ledger.we_owe_cny).toBe('0.00');
     expect(ledger.balance_cny).toBe('500.00');
   });
 });

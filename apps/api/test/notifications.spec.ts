@@ -8,6 +8,7 @@ import {
   buyCurrency,
   documentFlow,
   resetModule2,
+  shipPurchase,
 } from './module2-harness';
 
 describe('Notifications and alerts (Module 2.7, §39)', () => {
@@ -45,7 +46,10 @@ describe('Notifications and alerts (Module 2.7, §39)', () => {
     });
   }
 
-  /** A confirmed purchase is what puts a supplier into debt (§4.2). */
+  /**
+   * An order shipped from the supplier is what puts us into debt (§4.2,
+   * §6.5) — the order alone owes nobody anything.
+   */
   async function owedToSupplier(totalCny: string): Promise<string> {
     const flow = documentFlow(app, ctx.ownerToken);
     const { id } = await flow.createAndConfirm('/api/purchases', {
@@ -55,6 +59,7 @@ describe('Notifications and alerts (Module 2.7, §39)', () => {
         { product_id: ctx.productIds[0], qty: '1.00', price_cny: totalCny },
       ],
     });
+    await shipPurchase(app, ctx.ownerToken, id);
     return id;
   }
 

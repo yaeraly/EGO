@@ -7,6 +7,7 @@ import {
   buyCurrency,
   documentFlow,
   resetModule2,
+  shipPurchase,
 } from './module2-harness';
 
 const D = (value: string | number) => new Prisma.Decimal(value);
@@ -43,7 +44,12 @@ describe('Supplier ledger and payments (Module 2.4 and 2.5)', () => {
       toAccount: ctx.cnyAccount,
     });
 
-  /** A confirmed order for the given CNY total, as one line. */
+  /**
+   * An order for the given CNY total, confirmed and shipped.
+   *
+   * Shipped, because the debt falls due when the goods leave the supplier's
+   * warehouse (§6.5) — a confirmed order on its own owes nobody anything.
+   */
   async function orderFor(totalCny: string): Promise<string> {
     const { id } = await flow().createAndConfirm('/api/purchases', {
       supplier_id: ctx.supplierId,
@@ -51,6 +57,7 @@ describe('Supplier ledger and payments (Module 2.4 and 2.5)', () => {
         { product_id: ctx.productIds[0], qty: '1.00', price_cny: totalCny },
       ],
     });
+    await shipPurchase(app, ctx.ownerToken, id);
     return id;
   }
 
@@ -93,7 +100,7 @@ describe('Supplier ledger and payments (Module 2.4 and 2.5)', () => {
     });
   });
 
-  describe('a confirmed order recognises the payable (§4.2)', () => {
+  describe('a shipped order recognises the payable (§4.2, §6.5)', () => {
     it('books the order total as debt, in CNY', async () => {
       await buyCny('20000.00', '13.00');
       await orderFor('8000.00');
@@ -123,7 +130,7 @@ describe('Supplier ledger and payments (Module 2.4 and 2.5)', () => {
       await orderFor('8000.00');
 
       const audit = await prisma.audit_log.findFirst({
-        where: { action: 'PURCHASE_CONFIRMED' },
+        where: { action: 'PURCHASE_PAYABLE_RECOGNISED' },
       });
       expect(audit?.new_value).toMatchObject({
         reference_rate: '13',
@@ -131,19 +138,19 @@ describe('Supplier ledger and payments (Module 2.4 and 2.5)', () => {
       });
     });
 
-    it('refuses to confirm with no reference rate at all', async () => {
-      const { body } = await asOwner(http().post('/api/purchases'))
-        .send({
-          supplier_id: ctx.supplierId,
-          items: [
-            { product_id: ctx.productIds[0], qty: '1.00', price_cny: '100.00' },
-          ],
-        })
-        .expect(201);
+    it('refuses to ship with no reference rate at all', async () => {
+      // Confirming the order is fine — it owes nobody anything yet. It is
+      // recognising the debt that needs a rate to book it at (§10.1).
+      const { id } = await flow().createAndConfirm('/api/purchases', {
+        supplier_id: ctx.supplierId,
+        items: [
+          { product_id: ctx.productIds[0], qty: '1.00', price_cny: '100.00' },
+        ],
+      });
 
-      const res = await asOwner(
-        http().post(`/api/documents/${body.id}/confirm`),
-      ).expect(409);
+      const res = await asOwner(http().post(`/api/purchases/${id}/status`))
+        .send({ status: 'LEFT_SUPPLIER', reason: 'shipped' })
+        .expect(409);
       expect(res.body.message).toContain('CEX');
     });
 
@@ -160,7 +167,7 @@ describe('Supplier ledger and payments (Module 2.4 and 2.5)', () => {
       expect(entry.kgs_value?.toFixed(2)).toBe('-12800.00');
 
       const audit = await prisma.audit_log.findFirst({
-        where: { action: 'PURCHASE_CONFIRMED' },
+        where: { action: 'PURCHASE_PAYABLE_RECOGNISED' },
       });
       expect(audit?.new_value).toMatchObject({ reference_rate_source: 'MANUAL' });
     });

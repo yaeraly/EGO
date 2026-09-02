@@ -20,6 +20,8 @@ import {
   UpdatePurchaseDto,
 } from './dto/purchase.dto';
 import { LOGISTICS_SEQUENCE, nextStage, stageIndex, stageNumber } from './logistics-status';
+import { payableIsDue } from './payable-recognition';
+import { PurchasePayableService } from './purchase-payable.service';
 import { PurchaseListRow, PurchaseWithItems, PurchasesRepository } from './purchases.repository';
 
 const ZERO = new Prisma.Decimal(0);
@@ -37,7 +39,9 @@ export interface StageDuration {
  * Purchase (PUR) — §4.1, §6.
  *
  * The order placed with the Chinese supplier. Its lines are priced in CNY, and
- * confirming it recognises what we owe (§4.2). Its logistics stage (§6) runs
+ * the debt for them falls due when they leave the partner's warehouse (§6.5).
+ * Confirming the order is not that moment: until the goods are shipped there
+ * is only a list of parts we have asked for. Its logistics stage (§6) runs
  * independently of its payment status: goods move whether or not they are
  * paid for, and neither blocks the other.
  */
@@ -52,8 +56,7 @@ export class PurchasesService implements DocumentPoster, OnModuleInit {
     private readonly suppliers: SuppliersService,
     private readonly cargoCompanies: CargoCompaniesService,
     private readonly products: ProductsService,
-    private readonly referenceRate: ReferenceRateService,
-    private readonly ledger: SupplierLedgerService,
+    private readonly payable: PurchasePayableService,
     private readonly audit: AuditService,
     private readonly posting: DocumentPostingRegistry,
   ) {}
@@ -91,8 +94,8 @@ export class PurchasesService implements DocumentPoster, OnModuleInit {
 
   /**
    * Lines are only editable while the document is a DRAFT (§27.1); once it is
-   * confirmed the order has been placed and the payable recognised, and a
-   * change goes through a correction document.
+   * confirmed the order has been placed with the supplier, and a change goes
+   * through a correction document.
    */
   async replaceItems(
     documentId: string,
@@ -167,15 +170,12 @@ export class PurchasesService implements DocumentPoster, OnModuleInit {
   }
 
   /**
-   * Confirming the order recognises the payable (§4.2).
+   * Confirming the order places it — it does not yet cost us anything.
    *
-   * The amount is the order total in CNY — the debt itself is a yuan debt. Its
-   * KGS value is booked at the reference rate (§10.1) so that a later payment
-   * has something to measure gain or loss against; the rate and its source go
-   * into the Audit Log, as §10.1 requires.
-   *
-   * If the goods arrive short, Module 3 adjusts this per §8.3 rather than
-   * rewriting the entry.
+   * The partner still has to gather the parts, and either side can walk away
+   * until they are shipped. So nothing reaches the supplier ledger here; the
+   * debt is recognised when the goods leave their warehouse (§6.5), in
+   * `advanceStatus`.
    */
   async post(
     tx: Prisma.TransactionClient,
@@ -190,14 +190,6 @@ export class PurchasesService implements DocumentPoster, OnModuleInit {
     }
 
     const total = totalCny(purchase);
-    const reference = await this.referenceRate.forCurrency(currency_code.CNY);
-
-    await this.ledger.recordPayable(tx, {
-      supplierId: purchase.supplier_id,
-      documentId: document.id,
-      amountCny: total,
-      rateKgs: reference.rate,
-    });
 
     // The starting point of the timeline, so §6's stage durations have an
     // origin to measure from.
@@ -217,13 +209,16 @@ export class PurchasesService implements DocumentPoster, OnModuleInit {
         newValue: {
           supplier_id: purchase.supplier_id,
           total_cny: total.toFixed(2),
-          reference_rate: reference.rate.toString(),
-          reference_rate_source: reference.source,
-          payable_kgs: total.times(reference.rate).toFixed(2),
         },
       },
       tx,
     );
+
+    // An order confirmed at or past the shipping stage — the OWNER may set any
+    // stage — owes for its goods from the moment it is confirmed.
+    if (payableIsDue(purchase.logistics_status)) {
+      await this.payable.recognise(tx, document.id, userId);
+    }
   }
 
   /**
@@ -279,6 +274,11 @@ export class PurchasesService implements DocumentPoster, OnModuleInit {
         status: to,
         userId,
       });
+
+      // The goods have left the partner's warehouse: the money is due (§6.5).
+      if (payableIsDue(to)) {
+        await this.payable.recognise(tx, documentId, userId);
+      }
 
       if (!isNextStep) {
         await this.audit.log(

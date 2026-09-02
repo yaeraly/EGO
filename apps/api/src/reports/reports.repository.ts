@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { LOGISTICS_SEQUENCE } from '../purchases/logistics-status';
+import { goodsAreInTransit } from '../purchases/payable-recognition';
 
 const ZERO = new Prisma.Decimal(0);
 
@@ -321,6 +323,30 @@ export class ReportsRepository {
       HAVING SUM(ls.qty) <> 0
       ORDER BY w.wtype, w.code
     `;
+  }
+
+  /**
+   * Goods shipped by the supplier but not yet received (§6.5, §7).
+   *
+   * From the moment the parts leave the partner's warehouse we owe for them
+   * and they owe us the goods, so the debt has an asset facing it: a claim on
+   * the supplier for a shipment in transit. It is carried at the value the
+   * debt was recognised at, and it leaves this line at the moment the Receipt
+   * turns it into stock at its landed cost — never both at once.
+   */
+  async goodsInTransit(): Promise<Prisma.Decimal> {
+    const stages = LOGISTICS_SEQUENCE.filter(goodsAreInTransit) as string[];
+    const [row] = await this.prisma.$queryRaw<{ total: Prisma.Decimal | null }[]>`
+      SELECT -SUM(l.kgs_value) AS total
+      FROM supplier_ledger l
+      JOIN purchases p ON p.document_id = l.document_id
+      JOIN documents d ON d.id = p.document_id
+      WHERE l.entry_type = 'PAYABLE'
+        AND d.status = 'CONFIRMED'
+        AND p.logistics_status::text = ANY(${stages})
+        AND ${notReversed()}
+    `;
+    return row?.total ?? ZERO;
   }
 
   /** What customers owe (§16). Never mixed with what they have paid ahead. */

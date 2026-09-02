@@ -20,6 +20,19 @@ export const STATUS_LABEL: Record<PurchaseStatus, string> = {
   CLOSED: 'Партия жабылды',
 };
 
+/** The stages, in §6's order — the same sequence the server keeps. */
+export const STAGE_ORDER = Object.keys(STATUS_LABEL) as PurchaseStatus[];
+
+/**
+ * Whether the goods have left the supplier's warehouse (§6.5).
+ *
+ * That is when the money falls due: before it there is only an order, and a
+ * payment made then is an advance (§4.3), not a debt being settled.
+ */
+export function payableIsDue(status: PurchaseStatus): boolean {
+  return STAGE_ORDER.indexOf(status) >= STAGE_ORDER.indexOf('LEFT_SUPPLIER');
+}
+
 export const PAYMENT_LABEL: Record<PaymentStatus, string> = {
   UNPAID: 'Төлөнгөн эмес',
   PARTIALLY_PAID: 'Жарым-жартылай',

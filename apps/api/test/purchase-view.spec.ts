@@ -7,6 +7,7 @@ import {
   buyCurrency,
   documentFlow,
   resetModule2,
+  shipPurchase,
 } from './module2-harness';
 
 describe('Purchase board (Module 2.4 and 2.8 read model)', () => {
@@ -143,6 +144,8 @@ describe('Purchase board (Module 2.4 and 2.8 read model)', () => {
     it('does not count a payment made to the supplier but not to this order', async () => {
       await withYuan();
       const id = await confirmedPurchase(oneLine('10.00', '100.00'));
+      // Shipped, so there is a debt for the payment to land against (§6.5).
+      await shipPurchase(app, ctx.ownerToken, id);
       await payTowards(null, '700.00');
 
       const { body } = await asOwner(http().get(`/api/purchase-board/${id}`)).expect(200);
@@ -193,6 +196,7 @@ describe('Purchase board (Module 2.4 and 2.8 read model)', () => {
     it('shows the KGS reference value as information only (§4.2)', async () => {
       await withYuan('3000.00', '13.00');
       const id = await confirmedPurchase(oneLine('10.00', '100.00'));
+      await shipPurchase(app, ctx.ownerToken, id);
 
       const { body } = await asOwner(http().get(`/api/purchase-board/${id}`)).expect(200);
 
