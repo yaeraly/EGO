@@ -12,6 +12,7 @@ import { CargoPaymentsModule } from './cargo-payments/cargo-payments.module';
 import { CategoriesModule } from './categories/categories.module';
 import { CounterpartiesModule } from './counterparties/counterparties.module';
 import { LedgersModule } from './ledgers/ledgers.module';
+import { MediaModule } from './media/media.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ClaimsModule } from './claims/claims.module';
 import { CreditModule } from './credit/credit.module';
@@ -83,6 +84,7 @@ enableBigIntJson();
     LedgersModule,
     CounterpartiesModule,
     ProductsModule,
+    MediaModule,
     ReservationsModule,
     ReturnsModule,
     DefectsModule,

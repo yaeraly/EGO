@@ -215,6 +215,16 @@ export interface Product {
   supplier_product_code: string | null;
 }
 
+/** One photo on a product's card (§12-Б.1). */
+export interface ProductImage {
+  id: string;
+  width: number;
+  height: number;
+  bytes: number;
+  uploaded_at: string;
+  uploaded_by: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Module 5 — product catalogue (§12-Б)
 // ─────────────────────────────────────────────────────────────────────────

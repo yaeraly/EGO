@@ -5,12 +5,14 @@ import type {
   AliasKind,
   CompatibilityLink,
   ProductCard,
+  ProductImage,
   VehicleModel,
 } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { Money } from '../components/Money';
 import { WAREHOUSE_TYPE_LABEL } from '../components/module3-labels';
 import { Empty, ErrorBanner, Loading, Page } from '../components/Page';
+import { ProductGallery } from '../components/ProductImages';
 import { useApi } from '../hooks/useApi';
 
 const ALIAS_KIND_LABEL: Record<AliasKind, string> = {
@@ -33,6 +35,7 @@ export function ProductPage() {
   const { id = '' } = useParams();
   const { hasRole } = useAuth();
   const card = useApi<ProductCard>(id ? `/products/${id}/card` : null);
+  const images = useApi<ProductImage[]>(id ? `/products/${id}/images` : null);
 
   if (card.loading) {
     return <Page title="Товар" back="/products"><Loading /></Page>;
@@ -64,6 +67,7 @@ export function ProductPage() {
           <strong>{product.sku}</strong>
           {!product.is_active && <span className="badge danger">Пассив</span>}
         </div>
+        <ProductGallery productId={product.id} images={images.data ?? []} />
         <Field label="Категория" value={category?.name ?? '—'} />
         <Field label="Бренд" value={product.brand ?? '—'} />
         <Field label="Бирдиги" value={product.unit} />

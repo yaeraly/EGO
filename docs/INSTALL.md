@@ -229,6 +229,23 @@ sudo -u postgres createdb egomot_restore_test
 sudo -u postgres pg_restore -d egomot_restore_test /var/backups/egomot/egomot-....dump
 ```
 
+### Товардын сүрөттөрү — базада эмес, дискте
+
+Товардын сүрөттөрү (§12-Б.1) `UPLOAD_DIR` папкасында жатат (демейки —
+`apps/api/var/uploads`), базада алардын тизмеси гана сакталат. Демек
+`pg_dump` аларды **алып кетпейт**: папканын өзүнчө көчүрмөсү керек, болбосо
+базаны кайра жүктөгөндө бардык карточкалар сүрөтсүз калат.
+
+```bash
+sudo tee -a /etc/cron.daily/egomot-backup >/dev/null <<'CRON'
+tar -czf "/var/backups/egomot/uploads-$STAMP.tar.gz" -C /opt/egomot/apps/api/var uploads
+find /var/backups/egomot -name 'uploads-*.tar.gz' -mtime +30 -delete
+CRON
+```
+
+> Эки көчүрмө тең бир эле күндүн ичинде алынсын: база менен папка бири-бирине
+> шилтеме кылат.
+
 ---
 
 ## 7. Жаңыртуу

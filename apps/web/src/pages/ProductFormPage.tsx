@@ -1,8 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ApiError, api } from '../api/client';
+import { ApiError, api, apiUpload } from '../api/client';
 import type { Category, Product, Supplier } from '../api/types';
 import { ErrorBanner, Loading, Page } from '../components/Page';
+import {
+  PendingImagePicker,
+  ProductImageEditor,
+} from '../components/ProductImages';
 import { useApi } from '../hooks/useApi';
 
 /** Every field the form writes, kept as the strings the API expects. */
@@ -78,6 +82,8 @@ export function ProductFormPage() {
   const existing = useApi<Product>(id ? `/products/${id}` : null);
 
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  // A new product has no id yet, so its photos wait here until it is saved.
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -105,6 +111,11 @@ export function ProductFormPage() {
         navigate(`/products/${id}`);
       } else {
         const created = await api<Product>('/products', { method: 'POST', body });
+        // The product is saved either way: a photo that fails to upload is
+        // said so on its card, not by losing everything else that was typed.
+        for (const file of pendingImages) {
+          await apiUpload(`/products/${created.id}/images`, file);
+        }
         navigate(`/products/${created.id}`);
       }
     } catch (e: unknown) {
@@ -189,6 +200,13 @@ export function ProductFormPage() {
             SKU менен штрихкодду система өзү берет — кол менен терилбейт
             (§12-Б.9.1).
           </p>
+        )}
+
+        <h3 className="section-title">Сүрөт (§12-Б.1)</h3>
+        {editing ? (
+          <ProductImageEditor productId={id as string} />
+        ) : (
+          <PendingImagePicker files={pendingImages} onChange={setPendingImages} />
         )}
 
         <h3 className="section-title">Кошумча маалымат</h3>

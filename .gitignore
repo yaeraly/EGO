@@ -7,4 +7,6 @@ coverage/
 *.log
 .DS_Store
 apps/web/dev-dist/
+var/
+
 *.tsbuildinfo
