@@ -498,15 +498,12 @@ Product photo acceptance criteria (§12-Б.1):
 | 9 | One product cannot serve another product's photo | `test/product-images.spec.ts` |
 | 10 | §26: who added and who removed a picture is in the audit log | `test/product-images.spec.ts` |
 
-### Open questions
+A product's photos are the OWNER's to add, and that is settled: §12-Б.1 asks
+the card to carry a picture of the part without saying who puts it there, and
+the OWNER has decided the photos follow the rest of the product card, which is
+reference data the OWNER keeps (§2).
 
-- **A product's photos are the OWNER's to add, like the rest of its card.**
-  §12-Б.1 asks the card to carry a picture of the part and does not say who
-  puts it there. The rest of the product card is reference data the OWNER
-  keeps (§2), so the photos follow it. The argument the other way is real —
-  the part is in front of the person at the counter, not the OWNER — so say
-  the word and adding a picture becomes everyone's, with removing it left to
-  the OWNER.
+### Open questions
 
 - **A second salary payment in the same month is allowed** (§25). §25 asks for
   the history to be kept and says nothing about one payment a month, and
