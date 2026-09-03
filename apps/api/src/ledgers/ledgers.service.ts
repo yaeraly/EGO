@@ -60,13 +60,13 @@ export class SupplierLedgerService {
     private readonly repository: SupplierLedgerRepository,
   ) {}
 
-  /** Whether this purchase's payable has already been recognised (§6.5). */
+  /** Whether this purchase's payable has already been recognised (§6.1). */
   hasPayable(tx: Db, documentId: string): Promise<boolean> {
     return this.repository.hasEntry(tx, documentId, SupplierEntry.PAYABLE);
   }
 
   /**
-   * Recognises what we owe for goods that have left the supplier (§4.2, §6.5).
+   * Recognises what we owe for goods that have left the supplier (§4.2, §6.1).
    *
    * The amount is the order total in CNY; the KGS value is that total at the
    * reference rate (§10.1), and it is what a later payment's gain or loss is

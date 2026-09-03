@@ -48,7 +48,7 @@ describe('Notifications and alerts (Module 2.7, §39)', () => {
 
   /**
    * An order shipped from the supplier is what puts us into debt (§4.2,
-   * §6.5) — the order alone owes nobody anything.
+   * §6.1) — the order alone owes nobody anything.
    */
   async function owedToSupplier(totalCny: string): Promise<string> {
     const flow = documentFlow(app, ctx.ownerToken);

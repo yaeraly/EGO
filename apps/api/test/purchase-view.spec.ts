@@ -144,7 +144,7 @@ describe('Purchase board (Module 2.4 and 2.8 read model)', () => {
     it('does not count a payment made to the supplier but not to this order', async () => {
       await withYuan();
       const id = await confirmedPurchase(oneLine('10.00', '100.00'));
-      // Shipped, so there is a debt for the payment to land against (§6.5).
+      // Shipped, so there is a debt for the payment to land against (§6.1).
       await shipPurchase(app, ctx.ownerToken, id);
       await payTowards(null, '700.00');
 

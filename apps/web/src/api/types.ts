@@ -1156,7 +1156,7 @@ export interface BalanceReport {
   inventory_total: string;
   customer_receivables: string;
   customer_advances: string;
-  /** §6.5 — поставщик жөнөткөн, приход боло элек товар. */
+  /** §6.1 — поставщик жөнөткөн, приход боло элек товар. */
   goods_in_transit: string;
   supplier_payable: { name: string; balance_cny: string; kgs: string }[];
   supplier_payable_total_kgs: string;

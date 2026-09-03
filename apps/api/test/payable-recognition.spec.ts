@@ -5,14 +5,14 @@ import { createTestApp } from './app-harness';
 import { Module3Context, confirmedPurchase, resetModule3 } from './module3-harness';
 
 /**
- * When we owe the supplier (§6.5).
+ * When we owe the supplier (§6.1).
  *
  * The partner gathers the parts we asked for; the money falls due when the
  * goods leave their warehouse. Until then an order is a request, not a debt —
  * and from then until the receipt the supplier owes us the shipment, which is
  * the asset that faces the debt on the Balance.
  */
-describe('The supplier debt falls due at shipment (§6.5)', () => {
+describe('The supplier debt falls due at shipment (§6.1)', () => {
   let app: INestApplication;
   let prisma: PrismaClient;
   let ctx: Module3Context;

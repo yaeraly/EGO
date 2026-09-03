@@ -135,7 +135,7 @@ export function documentFlow(
 /**
  * Moves a confirmed order to "left the supplier's warehouse" (§6, stage 5).
  *
- * That is the moment the debt for the goods falls due (§6.5), so any test
+ * That is the moment the debt for the goods falls due (§6.1), so any test
  * about a supplier payable has to get the order there first.
  */
 export async function shipPurchase(

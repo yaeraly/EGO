@@ -103,7 +103,7 @@ export interface BalanceParts {
   inventoryMain: Prisma.Decimal;
   inventoryDefect: Prisma.Decimal;
   customerReceivables: Prisma.Decimal;
-  /** Shipped but not yet received — the supplier owes us the goods (§6.5). */
+  /** Shipped but not yet received — the supplier owes us the goods (§6.1). */
   goodsInTransit: Prisma.Decimal;
   supplierReceivables: Prisma.Decimal;
   cargoReceivables: Prisma.Decimal;
@@ -138,7 +138,7 @@ export interface BalanceTotals {
  * them would hide both.
  *
  * Goods in transit are what keeps the two sides level between the moment the
- * supplier ships (when the debt falls due, §6.5) and the moment we receive:
+ * supplier ships (when the debt falls due, §6.1) and the moment we receive:
  * the debt is on one side and the shipment we are owed on the other. At the
  * Receipt the shipment becomes stock and the line empties.
  */

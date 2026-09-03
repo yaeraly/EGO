@@ -9,7 +9,7 @@ import { PurchasesRepository } from './purchases.repository';
 const ZERO = new Prisma.Decimal(0);
 
 /**
- * What we owe the supplier for one order, and when (§4.2, §6.5).
+ * What we owe the supplier for one order, and when (§4.2, §6.1).
  *
  * The order itself commits nobody: the partner still has to gather the parts,
  * and either side can walk away. The money falls due when the goods leave

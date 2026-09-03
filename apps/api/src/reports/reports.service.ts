@@ -79,7 +79,7 @@ export interface BalanceReport extends BalanceTotals {
   inventory_total: string;
   customer_receivables: string;
   customer_advances: string;
-  /** §6.5 — shipped by the supplier, not yet received. */
+  /** §6.1 — shipped by the supplier, not yet received. */
   goods_in_transit: string;
   supplier_payable: { name: string; balance_cny: string; kgs: string }[];
   supplier_payable_total_kgs: string;

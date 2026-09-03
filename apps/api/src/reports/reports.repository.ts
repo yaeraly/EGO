@@ -326,7 +326,7 @@ export class ReportsRepository {
   }
 
   /**
-   * Goods shipped by the supplier but not yet received (§6.5, §7).
+   * Goods shipped by the supplier but not yet received (§6.1, §7).
    *
    * From the moment the parts leave the partner's warehouse we owe for them
    * and they owe us the goods, so the debt has an asset facing it: a claim on

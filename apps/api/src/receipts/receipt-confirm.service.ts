@@ -105,7 +105,7 @@ export class ReceiptConfirmService {
     // 4. §18, §8.4, §12-А.6 — stock, split between MAIN and DEFECT.
     await this.createLayers(tx, document, receipt, costing.lines, lotItemByLine);
 
-    // 5. §6.5 — goods cannot arrive without having left the supplier, so the
+    // 5. §6.1 — goods cannot arrive without having left the supplier, so the
     // debt for them is due by now even if nobody moved the stage along.
     await this.purchasePayable.recognise(
       tx,

@@ -116,7 +116,7 @@ export function PurchaseCardPage() {
         <h3 className="section-title">Төлөмдөр</h3>
         {!payableIsDue(data.logistics.status) && (
           <p className="banner info" style={{ margin: 0 }}>
-            Товар поставщиктин складынан чыга элек — азырынча карыз жок (§6.5).
+            Товар поставщиктин складынан чыга элек — азырынча карыз жок (§6.1).
             Азыр төлөнгөн акча аванс болуп жазылат жана товар келгенде карызга
             эсептелет (§4.3).
           </p>

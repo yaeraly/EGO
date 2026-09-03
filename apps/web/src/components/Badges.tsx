@@ -24,7 +24,7 @@ export const STATUS_LABEL: Record<PurchaseStatus, string> = {
 export const STAGE_ORDER = Object.keys(STATUS_LABEL) as PurchaseStatus[];
 
 /**
- * Whether the goods have left the supplier's warehouse (§6.5).
+ * Whether the goods have left the supplier's warehouse (§6.1).
  *
  * That is when the money falls due: before it there is only an order, and a
  * payment made then is an advance (§4.3), not a debt being settled.

@@ -264,7 +264,7 @@ function Balance() {
             <Row label="Склад, баары" value={data.inventory_total} strong />
             <Row label="Кардар карызы" value={data.customer_receivables} muted />
             <Row
-              label="Жолдогу товар (§6.5)"
+              label="Жолдогу товар (§6.1)"
               value={data.goods_in_transit}
               muted
             />

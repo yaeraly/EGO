@@ -213,14 +213,14 @@ describe('Prepayment applied at receipt (Module 3.7, §4.3, §10.2)', () => {
     });
   });
 
-  it('treats money paid before the goods ship as an advance (§6.5)', async () => {
+  it('treats money paid before the goods ship as an advance (§6.1)', async () => {
     await buyCny('20000.00', '13.00');
 
     const purchaseId = await confirmedPurchase(app, ctx, {
       lines: [{ productIndex: 0, qty: '10.00', priceCny: '100.00' }],
     });
     // Both payments happen while the order is still being gathered, so there
-    // is no debt for either of them to close — an order is not a debt (§6.5).
+    // is no debt for either of them to close — an order is not a debt (§6.1).
     await pay('1000.00', purchaseId);
     await pay('500.00');
     expect(await sumOf('PREPAYMENT')).toBe('1500.00');

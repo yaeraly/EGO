@@ -39,7 +39,7 @@ export interface StageDuration {
  * Purchase (PUR) — §4.1, §6.
  *
  * The order placed with the Chinese supplier. Its lines are priced in CNY, and
- * the debt for them falls due when they leave the partner's warehouse (§6.5).
+ * the debt for them falls due when they leave the partner's warehouse (§6.1).
  * Confirming the order is not that moment: until the goods are shipped there
  * is only a list of parts we have asked for. Its logistics stage (§6) runs
  * independently of its payment status: goods move whether or not they are
@@ -174,7 +174,7 @@ export class PurchasesService implements DocumentPoster, OnModuleInit {
    *
    * The partner still has to gather the parts, and either side can walk away
    * until they are shipped. So nothing reaches the supplier ledger here; the
-   * debt is recognised when the goods leave their warehouse (§6.5), in
+   * debt is recognised when the goods leave their warehouse (§6.1), in
    * `advanceStatus`.
    */
   async post(
@@ -275,7 +275,7 @@ export class PurchasesService implements DocumentPoster, OnModuleInit {
         userId,
       });
 
-      // The goods have left the partner's warehouse: the money is due (§6.5).
+      // The goods have left the partner's warehouse: the money is due (§6.1).
       if (payableIsDue(to)) {
         await this.payable.recognise(tx, documentId, userId);
       }

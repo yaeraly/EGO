@@ -15,7 +15,7 @@ ABC, XYZ, margin and what needs ordering; plans, KPI and the reports by
 salesperson and by customer; the OWNER's dashboard; the purchasing
 assistant; the business health board; structured compatibility. The system
 issues the SKU and the barcode, a product card carries its photos, and the
-supplier debt falls due when the goods leave their warehouse (§6.5).
+supplier debt falls due when the goods leave their warehouse (§6.1).
 889 API tests and 11 client tests passing.
 
 | Task | State |
@@ -33,7 +33,7 @@ supplier debt falls due when the goods leave their warehouse (§6.5).
 | 2.1 Product master (minimal), suppliers, cargo companies | done |
 | 2.2 Purchase (PUR) — order, lines, CNY totals | done |
 | 2.3 Logistics status machine (§6, 16 stages) | done |
-| 2.4 Supplier ledger, payable recognition (§6.5), payment status | done |
+| 2.4 Supplier ledger, payable recognition (§6.1), payment status | done |
 | 2.5 Supplier payment (SPY) — currency FIFO, FX result | done |
 | 2.6 Cargo payment (CPY) — USD till or som at a stated rate | done |
 | 2.7 Alerts (§39, the part Module 2 can observe) | done |
@@ -155,7 +155,7 @@ Module 2 acceptance criteria:
 
 | # | Criterion | Covered by |
 |---|---|---|
-| 1 | An order shipped from the supplier books the payable in CNY at the reference rate (§6.5) | `test/supplier-payments.spec.ts`, `test/payable-recognition.spec.ts` |
+| 1 | An order shipped from the supplier books the payable in CNY at the reference rate (§6.1) | `test/supplier-payments.spec.ts`, `test/payable-recognition.spec.ts` |
 | 2 | A payment consumes currency FIFO and records the FX result (§10.2) | `test/supplier-payments.spec.ts` — debt at 13.00 paid from 13.00 + 14.00 layers → −5 000 KGS |
 | 3 | Paying more than the debt leaves an advance, not a negative debt (§4.3) | `test/supplier-payments.spec.ts` |
 | 4 | Logistics moves one step for staff, any step for the OWNER, audited (§6) | `test/purchases.spec.ts` |
@@ -165,7 +165,7 @@ Module 2 acceptance criteria:
 Module 2 also added the payment-status read model (`test/purchase-view.spec.ts`)
 and the §39 alerts (`test/notifications.spec.ts`).
 
-When the supplier debt falls due (§6.5):
+When the supplier debt falls due (§6.1):
 
 | # | Criterion | Covered by |
 |---|---|---|
@@ -517,15 +517,14 @@ the card to carry a picture of the part without saying who puts it there, and
 the OWNER has decided the photos follow the rest of the product card, which is
 reference data the OWNER keeps (§2).
 
-The supplier debt falls due when the goods leave the partner's warehouse (§6,
-stage 5) — the OWNER's rule, and what the code now does. The knowledge base
-does not state the moment: §4.2 describes the debt and §4.3 the prepayment,
-neither of them the point at which one arises. An order is a list of parts we
-have asked for and commits nobody; once it is shipped we owe for the goods and
-the partner owes us the shipment, which is the asset facing the debt on the
-Balance until the receipt turns it into stock. §4.3 reads the same way: an
-advance is applied "at the next Receipt", which is only a rule worth having if
-paying before the goods arrive is the ordinary case.
+The supplier debt falls due when the goods leave the partner's warehouse — the
+OWNER's rule, now written into the knowledge base as **§6.1** and implemented
+against it. An order is a list of parts we have asked for and commits nobody;
+once it is shipped we owe for the goods and the partner owes us the shipment,
+which is the asset facing the debt on the Balance until the receipt turns it
+into stock. §4.3 already read that way: an advance is applied "at the next
+Receipt", which is only a rule worth having if paying before the goods arrive
+is the ordinary case.
 
 ### Open questions
 
@@ -875,7 +874,7 @@ paying before the goods arrive is the ordinary case.
   extra units do not enter stock, because §8.8 gives no cost rule and says the
   goods enter "per a documented decision". The decision workflow is not built.
 - **The payable is recognised in CNY at the reference rate of the day the
-  goods leave the supplier** (§4.2, §6.5, §10.1), and a later payment's FX result is
+  goods leave the supplier** (§4.2, §6.1, §10.1), and a later payment's FX result is
   measured against that. The knowledge base states the debt is a yuan debt and
   §10.2 requires an FX result, but does not say which rate anchors it. The
   supplier ledger therefore carries a weighted-average KGS value over the open

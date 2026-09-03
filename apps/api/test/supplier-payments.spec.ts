@@ -48,7 +48,7 @@ describe('Supplier ledger and payments (Module 2.4 and 2.5)', () => {
    * An order for the given CNY total, confirmed and shipped.
    *
    * Shipped, because the debt falls due when the goods leave the supplier's
-   * warehouse (§6.5) — a confirmed order on its own owes nobody anything.
+   * warehouse (§6.1) — a confirmed order on its own owes nobody anything.
    */
   async function orderFor(totalCny: string): Promise<string> {
     const { id } = await flow().createAndConfirm('/api/purchases', {
@@ -100,7 +100,7 @@ describe('Supplier ledger and payments (Module 2.4 and 2.5)', () => {
     });
   });
 
-  describe('a shipped order recognises the payable (§4.2, §6.5)', () => {
+  describe('a shipped order recognises the payable (§4.2, §6.1)', () => {
     it('books the order total as debt, in CNY', async () => {
       await buyCny('20000.00', '13.00');
       await orderFor('8000.00');
